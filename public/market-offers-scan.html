@@ -194,7 +194,7 @@
             <div class="field" style="max-width: 200px;">
                 <label for="maxPagesInput">Max pages per account:</label>
                 <input type="number" id="maxPagesInput" value="100" min="1" step="1" />
-                <div class="small-note">Safety cap (50 offers/page).</div>
+                <div class="small-note">Safety cap (40 offers/page).</div>
             </div>
         </div>
 
@@ -257,7 +257,7 @@
 <script>
     // ============ Config ============
     const PROXY_URL = '/proxy';
-    const PAGE_SIZE = 50; // API returns 50 per page
+    const PAGE_SIZE = 40; // API returns 40 per page
 
     // ============ State ============
     let isScanning = false;
