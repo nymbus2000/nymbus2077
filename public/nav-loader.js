@@ -1,37 +1,96 @@
 // public/nav-loader.js - Handles loading and managing shared navigation
+// + in-memory proxy field (per tab, cleared on reload, injected via /proxy bodies)
 
-// Load navigation into the page
+// ============================================================
+// PROXY: install fetch patch IMMEDIATELY, before nav HTML arrives.
+// This ensures any /proxy calls made by the tool are covered,
+// regardless of when nav UI finishes loading.
+// In-memory only: dies on reload, isolated per tab.
+// ============================================================
+(function installProxyFetchPatch() {
+    if (window.__kolexProxyPatched) return;
+    window.__kolexProxyPatched = true;
+
+    const originalFetch = window.fetch.bind(window);
+    let proxyString = '';
+
+    // Expose getter + setter for the input wiring below
+    window.getProxyString = () => proxyString;
+    window.setProxyString = (v) => { proxyString = (v == null ? '' : String(v)); };
+
+    window.fetch = function (input, init) {
+        try {
+            const url = typeof input === 'string' ? input : (input && input.url) || '';
+            const isProxyCall = url === '/proxy' || url.endsWith('/proxy');
+            const p = proxyString.trim();
+            if (isProxyCall && p && init && typeof init.body === 'string') {
+                let body = null;
+                try { body = JSON.parse(init.body); } catch { body = null; }
+                if (body && typeof body === 'object') {
+                    body.proxy = p;
+                    init = { ...init, body: JSON.stringify(body) };
+                }
+            }
+        } catch (e) { /* never break the app */ }
+        return originalFetch(input, init);
+    };
+})();
+
+// ============================================================
+// NAV LOADING
+// ============================================================
 async function loadNavigation() {
     try {
         const response = await fetch('/nav.html');
         if (!response.ok) throw new Error('Failed to load navigation');
-        
+
         const navHtml = await response.text();
-        
-        // Insert navigation at the top of the body
+
         const body = document.body;
         body.insertAdjacentHTML('afterbegin', navHtml);
-        
-        // Highlight the current page in navigation
+
         highlightCurrentPage();
-        
-        // Update server info
+        wireProxyInput();     // <-- new: bind the injected field
         updateServerInfo();
-        
+
         return true;
     } catch (error) {
         console.error('Error loading navigation:', error);
-        // Fallback: show minimal navigation
         showFallbackNavigation();
         return false;
     }
+}
+
+// Bind the proxy input field (after nav.html has been injected)
+function wireProxyInput() {
+    const wrap = document.getElementById('proxy-input-wrap');
+    if (!wrap) return;
+    if (wrap.dataset.wired === '1') return; // idempotent
+    wrap.dataset.wired = '1';
+
+    const field = wrap.querySelector('#proxy-input-field');
+    const status = wrap.querySelector('#proxy-input-status');
+    if (!field) return;
+
+    function refresh() {
+        const v = field.value;
+        if (typeof window.setProxyString === 'function') window.setProxyString(v);
+        const on = !!v.trim();
+        if (status) {
+            status.textContent = on ? 'ON' : 'off';
+            status.classList.toggle('on', on);
+        }
+    }
+
+    field.addEventListener('input', refresh);
+    refresh(); // always starts empty on page load
 }
 
 // Highlight the current page in the navigation
 function highlightCurrentPage() {
     const currentPage = window.location.pathname.split('/').pop() || 'index.html';
     const links = document.querySelectorAll('.nav-link');
-    
+
     links.forEach(link => {
         const href = link.getAttribute('href');
         if (href === currentPage) {
@@ -46,11 +105,11 @@ function highlightCurrentPage() {
 async function updateServerInfo() {
     const serverInfoElement = document.getElementById('serverInfo');
     if (!serverInfoElement) return;
-    
+
     try {
         const response = await fetch('/health');
         const data = await response.json();
-        serverInfoElement.textContent = 
+        serverInfoElement.textContent =
             `Server: Healthy | API: ${data.apiConfigured ? 'Configured' : 'Not Configured'}`;
     } catch (error) {
         serverInfoElement.textContent = 'Server: Error connecting';
@@ -58,6 +117,7 @@ async function updateServerInfo() {
 }
 
 // Fallback navigation if nav.html can't be loaded
+// (kept minimal; no proxy field here — if nav.html is missing, wiring skips gracefully)
 function showFallbackNavigation() {
     const fallbackNav = `
         <div class="nav-bar" style="background: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">

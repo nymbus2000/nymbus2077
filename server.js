@@ -2,6 +2,9 @@ const express = require('express');
 const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
+const { SocksProxyAgent } = require('socks-proxy-agent');
+const { HttpsProxyAgent } = require('https-proxy-agent');
+const { HttpProxyAgent } = require('http-proxy-agent');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +20,54 @@ const CONFIG_FILE = path.join(__dirname, 'crafting-config.json');
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 
+// ---- Proxy helpers ----
+// Parse a proxy string like:
+//   socks5://user:pass@1.2.3.4:1080
+//   socks4://1.2.3.4:1080
+//   http://user:pass@1.2.3.4:8080
+//   https://user:pass@1.2.3.4:8080
+function parseProxyUrl(proxyStr) {
+    if (!proxyStr || typeof proxyStr !== 'string') return null;
+    const trimmed = proxyStr.trim();
+    if (!trimmed) return null;
+    // Require a scheme
+    if (!/^[a-zA-Z0-9]+:\/\//.test(trimmed)) {
+        throw new Error('Proxy must include scheme, e.g. socks5://user:pass@host:port');
+    }
+    const u = new URL(trimmed);
+    const proto = u.protocol.replace(':', '').toLowerCase();
+    if (!['socks5', 'socks5h', 'socks4', 'http', 'https'].includes(proto)) {
+        throw new Error(`Unsupported proxy protocol: ${proto}`);
+    }
+    if (!u.hostname || !u.port) {
+        throw new Error('Proxy must include host and port');
+    }
+    return { url: trimmed, protocol: proto };
+}
+
+// Build the appropriate agent for the target URL + proxy
+function buildAgentFor(proxyInfo, targetUrl) {
+    if (!proxyInfo) return undefined;
+    const targetIsHttps = targetUrl.startsWith('https://');
+    const p = proxyInfo.protocol;
+
+    if (p === 'socks5' || p === 'socks5h' || p === 'socks4') {
+        return new SocksProxyAgent(proxyInfo.url);
+    }
+    if (p === 'http') {
+        return targetIsHttps
+            ? new HttpsProxyAgent(proxyInfo.url)
+            : new HttpProxyAgent(proxyInfo.url);
+    }
+    if (p === 'https') {
+        // HTTPS proxy that terminates TLS itself
+        return targetIsHttps
+            ? new HttpsProxyAgent(proxyInfo.url)
+            : new HttpProxyAgent(proxyInfo.url);
+    }
+    return undefined;
+}
+
 // Load or create default config
 let craftingConfig = {};
 function loadConfig() {
@@ -26,24 +77,11 @@ function loadConfig() {
             craftingConfig = JSON.parse(data);
             console.log('Loaded crafting config:', craftingConfig);
         } else {
-            // Create default config
             craftingConfig = {
                 requirements: [
-                    {
-                        requirementId: 3235,
-                        cardsPerCraft: 16,
-                        collectionIds: [17920, 17921, 17922]
-                    },
-                    {
-                        requirementId: 3236,
-                        cardsPerCraft: 8,
-                        collectionIds: [17923, 17924, 17925]
-                    },
-                    {
-                        requirementId: 3237,
-                        cardsPerCraft: 4,
-                        collectionIds: [17953, 17986, 17987]
-                    }
+                    { requirementId: 3235, cardsPerCraft: 16, collectionIds: [17920, 17921, 17922] },
+                    { requirementId: 3236, cardsPerCraft: 8, collectionIds: [17923, 17924, 17925] },
+                    { requirementId: 3237, cardsPerCraft: 4, collectionIds: [17953, 17986, 17987] }
                 ],
                 craftingPlanId: "3202",
                 silvercoins: 5000,
@@ -54,7 +92,6 @@ function loadConfig() {
         }
     } catch (error) {
         console.error('Error loading config:', error);
-        // Use defaults if loading fails
         craftingConfig = {
             requirements: [
                 { requirementId: 3235, cardsPerCraft: 16, collectionIds: [17920, 17921, 17922] },
@@ -79,55 +116,62 @@ function saveConfig() {
     }
 }
 
-// Load config on startup
 loadConfig();
 
 // Proxy endpoint - all URLs are constructed server-side
 app.post('/proxy', async (req, res) => {
-    const { endpoint, method, headers, data } = req.body;
-    
+    const { endpoint, method, headers, data, proxy } = req.body;
+
     if (!endpoint) {
         return res.status(400).json({ error: 'Endpoint is required' });
     }
 
-    // Construct full URL server-side using environment variable
     const url = `${API_BASE}${endpoint}`;
-    
-    // Validate that we're only calling API
     if (!url.startsWith(API_BASE)) {
         return res.status(403).json({ error: 'Invalid endpoint' });
     }
 
-    // Prepare headers
-    const proxyHeaders = {
-        ...headers,
-        'User-Agent': 'Card-Crafter/1.0',
-    };
+    // Per-request proxy (client-supplied). Empty/undefined → no proxy.
+    let proxyInfo = null;
+    const proxyRaw = (typeof proxy === 'string' && proxy.trim()) ? proxy.trim() : (process.env.DEFAULT_PROXY || '').trim();
+    if (proxyRaw) {
+        try {
+            proxyInfo = parseProxyUrl(proxyRaw);
+        } catch (e) {
+            return res.status(400).json({ error: 'Invalid proxy string', message: e.message });
+        }
+    }
 
-    // Remove headers that might cause issues
+    const proxyHeaders = { ...headers, 'User-Agent': 'Card-Crafter/1.0' };
     delete proxyHeaders['host'];
     delete proxyHeaders['origin'];
     delete proxyHeaders['referer'];
 
+    const agent = buildAgentFor(proxyInfo, url);
+
     try {
         const response = await axios({
-            url: url,
+            url,
             method: method || 'GET',
             headers: proxyHeaders,
-            data: data,
+            data,
             timeout: REQUEST_TIMEOUT,
-            validateStatus: null
+            validateStatus: null,
+            ...(agent ? { httpsAgent: agent, httpAgent: agent, proxy: false } : {})
         });
 
-        console.log(`[${new Date().toISOString()}] ${method} ${endpoint} -> ${response.status}`);
+        const proxyTag = proxyInfo ? `[via ${proxyInfo.protocol}]` : '[direct]';
+        console.log(`[${new Date().toISOString()}] ${method} ${endpoint} -> ${response.status} ${proxyTag}`);
         res.status(response.status).json(response.data);
     } catch (error) {
         console.error(`Proxy error:`, error.message);
-        
         if (error.code === 'ECONNABORTED') {
             return res.status(504).json({ error: 'Request timeout' });
         }
-        
+        // Surface proxy-specific errors more clearly
+        if (proxyInfo && (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || /proxy/i.test(error.message))) {
+            return res.status(502).json({ error: 'Proxy connection failed', message: error.message });
+        }
         res.status(500).json({ error: 'Proxy error', message: error.message });
     }
 });
@@ -140,19 +184,14 @@ app.get('/api/config', (req, res) => {
 app.post('/api/config', (req, res) => {
     try {
         const newConfig = req.body;
-        
-        // Validate the config structure
         if (!newConfig.requirements || !Array.isArray(newConfig.requirements)) {
             return res.status(400).json({ error: 'Invalid requirements format' });
         }
-        
-        // Ensure each requirement has the required fields
-        for (const req of newConfig.requirements) {
-            if (!req.requirementId || !req.cardsPerCraft || !req.collectionIds || !Array.isArray(req.collectionIds)) {
+        for (const req2 of newConfig.requirements) {
+            if (!req2.requirementId || !req2.cardsPerCraft || !req2.collectionIds || !Array.isArray(req2.collectionIds)) {
                 return res.status(400).json({ error: 'Invalid requirement structure' });
             }
         }
-        
         craftingConfig = newConfig;
         saveConfig();
         res.json({ success: true, config: craftingConfig });
@@ -162,15 +201,10 @@ app.post('/api/config', (req, res) => {
     }
 });
 
-// Health check
 app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'healthy',
-        apiConfigured: !!API_BASE
-    });
+    res.json({ status: 'healthy', apiConfigured: !!API_BASE });
 });
 
-// Redirect root to crafter
 app.get('/', (req, res) => {
     res.redirect('/crafter.html');
 });
