@@ -70,10 +70,57 @@
         padding-top: 4px;
         text-align: center;
     }
+
+    /* ---- Proxy row ---- */
+    .proxy-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+        padding: 8px 10px;
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 6px;
+        font-size: 12px;
+    }
+    .proxy-row label {
+        font-weight: 600;
+        color: #9a3412;
+        white-space: nowrap;
+    }
+    .proxy-row input {
+        flex: 1;
+        min-width: 260px;
+        padding: 5px 10px;
+        border: 1px solid #fdba74;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 11px;
+        background: #fff;
+    }
+    .proxy-row input:focus {
+        outline: none;
+        border-color: #ea580c;
+        box-shadow: 0 0 0 2px rgba(234,88,12,0.15);
+    }
+    .proxy-row .proxy-status {
+        font-size: 11px;
+        color: #9a3412;
+        white-space: nowrap;
+    }
+    .proxy-row .proxy-status.on {
+        color: #15803d;
+        font-weight: 700;
+    }
+
     @media (max-width: 768px) {
         .nav-group-label {
             min-width: 48px;
             font-size: 10px;
+        }
+        .proxy-row input {
+            min-width: 0;
         }
     }
 </style>
@@ -129,6 +176,15 @@
     </div>
 
     <!-- <div class="server-info" id="serverInfo">Loading server info...</div> -->
+</div>
+
+<!-- Proxy row: separate line, after all nav buttons -->
+<div class="proxy-row" id="proxy-input-wrap">
+    <label for="proxy-input-field">🌐 Proxy</label>
+    <input id="proxy-input-field" type="text"
+        placeholder="socks5://user:pass@1.2.3.4:1080  (empty = no proxy · cleared on reload)"
+        autocomplete="off" spellcheck="false">
+    <span class="proxy-status" id="proxy-input-status">off</span>
 </div>
 
 <script>
