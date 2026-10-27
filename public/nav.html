@@ -1,5 +1,8 @@
 <!-- nav.html - Shared Navigation Component -->
 <style>
+    /* Force left alignment globally so nav is consistent on every page */
+    body { text-align: left; }
+
     .nav-bar {
         background: white;
         padding: 10px 14px;
@@ -9,6 +12,11 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
+        align-items: flex-start;
+        text-align: left;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
     .nav-group {
         display: flex;
@@ -17,6 +25,9 @@
         gap: 2px;
         padding-bottom: 1px;
         border-bottom: 1px dashed #eee;
+        justify-content: flex-start;
+        width: 100%;
+        text-align: left;
     }
     .nav-group:last-child {
         border-bottom: none;
@@ -68,7 +79,7 @@
         font-size: 11px;
         white-space: nowrap;
         padding-top: 4px;
-        text-align: center;
+        text-align: left;
     }
 
     /* ---- Proxy row ---- */
@@ -83,6 +94,11 @@
         border: 1px solid #fed7aa;
         border-radius: 6px;
         font-size: 12px;
+        justify-content: flex-start;
+        text-align: left;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
     .proxy-row label {
         font-weight: 600;
@@ -144,7 +160,6 @@
         <a href="/bundle-creator-multi.html" class="nav-link">Bundle Creator Multi</a>
         <a href="/bundle-list-by-id.html" class="nav-link">Bundle List by ID</a>
         <a href="/bundle-list-by-id-multi.html" class="nav-link">Bundle List by ID Multi</a>
-        <a href="/bundle-price-change.html" class="nav-link">Bundle Price Change</a>
         <a href="/bundles-scan.html" class="nav-link">Bundle Scan</a>
         <a href="/bundle-remove-delete.html" class="nav-link">Bundle Remove/Delete</a>
     </div>

@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bundle Cleaner - Remove Cards & Delete</title>
+    <title>Bundle Cleaner - Remove Cards & Delete (Multi-JWT)</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -338,6 +338,24 @@
             color: #2980b9;
             font-weight: bold;
         }
+        .delay-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 15px 0 5px 0;
+        }
+        .delay-row label {
+            margin: 0;
+            white-space: nowrap;
+        }
+        .delay-row input[type="number"] {
+            width: 180px;
+            margin: 0;
+        }
+        .delay-hint {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
         .step-indicator {
             display: flex;
             gap: 20px;
@@ -374,25 +392,41 @@
     <!-- Navigation will be injected here by nav-loader.js -->
     <!-- The old nav-bar div has been removed -->
 
-    <h1>Bundle Cleaner - Remove Cards & Delete</h1>
+    <h1>Bundle Cleaner - Remove Cards & Delete (Multi-JWT)</h1>
     
     <div class="container">
         <h2>Configuration</h2>
-        
-        <div class="input-section">
-            <label for="jwtToken">JWT Token:</label>
-            <input type="text" id="jwtToken" placeholder="Enter your JWT token here" />
+
+        <div class="delay-row">
+            <label for="delayInput">Delay between bundles (ms):</label>
+            <input type="number" id="delayInput" value="2000" min="0" step="100" />
+            <span class="delay-hint">Default 2000ms (2s). Applies between each bundle.</span>
         </div>
         
         <div class="input-section">
             <label>Input Method:</label>
             <div class="tab-buttons">
                 <button class="tab-button active" onclick="switchTab('paste')">Paste Data</button>
-                <button class="tab-button" onclick="switchTab('file')">Upload File</button>
+                <button class="tab-button" onclick="switchTab('file')">Upload Files</button>
             </div>
             
             <div id="paste-tab" class="tab active">
                 <div class="dual-panel">
+                    <div class="panel">
+                        <div class="textarea-label">
+                            <label for="jwtsTextarea">JWT Tokens (one per line):</label>
+                            <span id="jwtsCount" class="count-badge">0 JWTs</span>
+                        </div>
+                        <textarea id="jwtsTextarea" rows="10" placeholder="Enter JWT tokens here, one per line.
+If only 1 is provided, it will be used for all bundles.
+If more, each JWT applies to its corresponding bundle (by index).
+Example:
+eyJhbGciOi...
+eyJhbGciOi...
+..."></textarea>
+                        <div class="small-note">Last JWT repeats if fewer than bundles. Extra JWTs are ignored.</div>
+                    </div>
+                    
                     <div class="panel">
                         <div class="textarea-label">
                             <label for="bundleIdsTextarea">Bundle IDs (one per line):</label>
@@ -405,31 +439,37 @@
 ..."></textarea>
                         <div class="small-note">Each bundle will be: 1) Cleared of all cards, then 2) Deleted</div>
                     </div>
-                    
-                    <div class="panel">
-                        <div class="textarea-label">
-                            <label for="bundleNamesTextarea">Bundle Names (optional, one per line):</label>
-                            <span id="bundleNamesCount" class="count-badge">0 names</span>
-                        </div>
-                        <textarea id="bundleNamesTextarea" rows="10" placeholder="Enter bundle names here, one per line. Each name corresponds to the bundle ID on the same line.
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <div class="textarea-label">
+                        <label for="bundleNamesTextarea">Bundle Names (optional, one per line):</label>
+                        <span id="bundleNamesCount" class="count-badge">0 names</span>
+                    </div>
+                    <textarea id="bundleNamesTextarea" rows="6" placeholder="Enter bundle names here, one per line. Each name corresponds to the bundle ID on the same line.
 Example:
 My Bundle 1
 My Bundle 2
 My Bundle 3
 ..."></textarea>
-                        <div class="small-note">Optional: If provided, these names will be used for display. If fewer names are provided, the last name will be repeated.</div>
-                    </div>
+                    <div class="small-note">Optional: If provided, these names will be used for display. If fewer names are provided, the last name will be repeated.</div>
                 </div>
             </div>
             
             <div id="file-tab" class="tab">
                 <div class="dual-panel">
                     <div class="panel">
+                        <label for="jwtsFile">Upload JWTs File:</label>
+                        <input type="file" id="jwtsFile" accept=".txt,.csv" />
+                        <div class="small-note">Text file with one JWT per line</div>
+                    </div>
+                    <div class="panel">
                         <label for="bundleIdsFile">Upload Bundle IDs File:</label>
                         <input type="file" id="bundleIdsFile" accept=".txt,.csv" />
                         <div class="small-note">Text file with one bundle ID per line</div>
                     </div>
-                    
+                </div>
+                <div style="margin-top: 15px;">
                     <div class="panel">
                         <label for="bundleNamesFile">Upload Bundle Names File (optional):</label>
                         <input type="file" id="bundleNamesFile" accept=".txt,.csv" />
@@ -447,7 +487,7 @@ My Bundle 3
         </div>
         
         <div class="delay-info">
-            ⏱️ 2 second delay between each bundle processing to avoid rate limiting
+            ⏱️ The delay above is applied between each bundle (clear + delete cycle) to avoid rate limiting.
         </div>
         
         <div class="stats">
@@ -486,7 +526,7 @@ My Bundle 3
     <div class="container">
         <h2>Progress Log</h2>
         <div class="log-container" id="logContainer">
-            <div class="log-entry log-info">Ready to start. Configure your JWT token and bundle IDs.</div>
+            <div class="log-entry log-info">Ready to start. Configure your JWT(s) and bundle IDs.</div>
         </div>
     </div>
     
@@ -505,10 +545,10 @@ My Bundle 3
 <script src="/nav-loader.js"></script>
 <script>
     // Configuration
-    const PROCESS_DELAY = 2000; // 2 seconds delay between bundles
-    
+    const DEFAULT_DELAY = 2000;
+
     // State variables
-    let jwtToken = "";
+    let jwts = [];
     let bundleIds = [];
     let bundleNames = [];
     let isProcessing = false;
@@ -520,7 +560,7 @@ My Bundle 3
     let completedBundles = 0;
     let failedBundles = 0;
     let totalCardsRemoved = 0;
-    
+
     // DOM Elements
     const startButton = document.getElementById('startButton');
     const pauseButton = document.getElementById('pauseButton');
@@ -533,12 +573,19 @@ My Bundle 3
     const bundleIdList = document.getElementById('bundleIdList');
     const notification = document.getElementById('notification');
     const matchStatus = document.getElementById('matchStatus');
-    
+    const delayInput = document.getElementById('delayInput');
+
     // Step indicator elements
     const stepClear = document.getElementById('stepClear');
     const stepDelete = document.getElementById('stepDelete');
-    
-    // Helper function to send requests through proxy (updated for Render.com)
+
+    // Read current delay from input, fallback to default
+    function getCurrentDelay() {
+        const v = parseInt(delayInput.value, 10);
+        return isNaN(v) || v < 0 ? DEFAULT_DELAY : v;
+    }
+
+    // Helper function to send requests through proxy
     async function sendProxyRequest(endpoint, method = 'GET', headers = {}, data = null) {
         try {
             const response = await fetch('/proxy', {
@@ -568,25 +615,26 @@ My Bundle 3
     
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
-        // Note: Server health check is now handled by nav-loader.js
-        
         startButton.addEventListener('click', toggleProcessing);
         pauseButton.addEventListener('click', pauseProcessing);
         resumeButton.addEventListener('click', resumeProcessing);
         verifyButton.addEventListener('click', verifyAllBundles);
-        
+
         // Update stats when inputs change
+        document.getElementById('jwtsTextarea').addEventListener('input', updateStats);
         document.getElementById('bundleIdsTextarea').addEventListener('input', updateStats);
         document.getElementById('bundleNamesTextarea').addEventListener('input', updateStats);
+
+        document.getElementById('jwtsFile').addEventListener('change', handleJwtsFileUpload);
         document.getElementById('bundleIdsFile').addEventListener('change', handleBundleIdsFileUpload);
         document.getElementById('bundleNamesFile').addEventListener('change', handleBundleNamesFileUpload);
-        document.getElementById('jwtToken').addEventListener('input', function() {
-            jwtToken = this.value.trim();
+
+        // Keep the delay value sane
+        delayInput.addEventListener('change', function() {
+            const v = getCurrentDelay();
+            delayInput.value = v;
         });
-        
-        // Initial JWT token value
-        jwtToken = document.getElementById('jwtToken').value.trim();
-        
+
         updateStats();
     });
     
@@ -605,6 +653,19 @@ My Bundle 3
         
         // Update stats based on new input method
         updateStats();
+    }
+
+    async function handleJwtsFileUpload() {
+        const file = document.getElementById('jwtsFile').files[0];
+        if (!file) return;
+        try {
+            const text = await readFileAsText(file);
+            document.getElementById('jwtsTextarea').value = text;
+            updateStats();
+            showNotification('JWTs file loaded successfully!', 'success');
+        } catch (error) {
+            showNotification(`Error reading file: ${error.message}`, 'error');
+        }
     }
     
     async function handleBundleIdsFileUpload() {
@@ -643,30 +704,17 @@ My Bundle 3
             reader.readAsText(file);
         });
     }
+
+    function parseLines(text) {
+        if (!text || !text.trim()) return [];
+        return text.split('\n').map(l => l.trim()).filter(l => l !== '');
+    }
     
     function updateStats() {
-        // Get bundle IDs from textarea
-        const bundleText = document.getElementById('bundleIdsTextarea').value.trim();
-        
-        if (!bundleText) {
-            bundleIds = [];
-        } else {
-            bundleIds = bundleText.split('\n')
-                .filter(line => line.trim() !== '')
-                .map(line => line.trim());
-        }
-        
-        // Get bundle names from textarea
-        const namesText = document.getElementById('bundleNamesTextarea').value.trim();
-        
-        if (!namesText) {
-            bundleNames = [];
-        } else {
-            bundleNames = namesText.split('\n')
-                .filter(line => line.trim() !== '')
-                .map(line => line.trim());
-        }
-        
+        jwts = parseLines(document.getElementById('jwtsTextarea').value);
+        bundleIds = parseLines(document.getElementById('bundleIdsTextarea').value);
+        bundleNames = parseLines(document.getElementById('bundleNamesTextarea').value);
+
         totalBundles = bundleIds.length;
         completedBundles = 0;
         failedBundles = 0;
@@ -679,31 +727,47 @@ My Bundle 3
         document.getElementById('totalCardsRemoved').textContent = totalCardsRemoved;
         
         // Update counts
+        document.getElementById('jwtsCount').textContent = `${jwts.length} JWTs`;
         document.getElementById('bundleIdsCount').textContent = `${bundleIds.length} IDs`;
         document.getElementById('bundleNamesCount').textContent = `${bundleNames.length} names`;
         
         // Show match status
         if (totalBundles > 0) {
+            const warnings = [];
+
+            if (jwts.length === 0) {
+                warnings.push('⚠️ No JWT provided. Please enter at least one JWT.');
+            } else if (jwts.length < totalBundles) {
+                warnings.push(`⚠️ Only ${jwts.length} JWT(s) for ${totalBundles} bundle(s). Last JWT will be repeated.`);
+            } else if (jwts.length > totalBundles) {
+                warnings.push(`⚠️ ${jwts.length} JWTs but only ${totalBundles} bundle(s). Extra ignored.`);
+            }
+
             if (bundleNames.length === 0) {
-                matchStatus.style.display = 'block';
-                matchStatus.className = 'match-status match-warning';
-                matchStatus.innerHTML = 'ℹ️ No bundle names provided. Using default names.';
+                warnings.push('ℹ️ No bundle names provided. Using default names.');
             } else if (bundleNames.length < totalBundles) {
-                matchStatus.style.display = 'block';
-                matchStatus.className = 'match-status match-warning';
-                matchStatus.innerHTML = `⚠️ Only ${bundleNames.length} name(s) provided for ${totalBundles} bundle(s). The last name "${bundleNames[bundleNames.length-1] || 'N/A'}" will be repeated for remaining bundles.`;
+                warnings.push(`⚠️ Only ${bundleNames.length} name(s) for ${totalBundles} bundle(s). Last "${bundleNames[bundleNames.length-1] || 'N/A'}" will be repeated.`);
             } else if (bundleNames.length > totalBundles) {
-                matchStatus.style.display = 'block';
-                matchStatus.className = 'match-status match-warning';
-                matchStatus.innerHTML = `⚠️ ${bundleNames.length} names provided but only ${totalBundles} bundle(s). Extra names will be ignored.`;
-            } else {
+                warnings.push(`⚠️ ${bundleNames.length} names but only ${totalBundles} bundle(s). Extra ignored.`);
+            }
+
+            if (warnings.length === 0) {
                 matchStatus.style.display = 'block';
                 matchStatus.className = 'match-status match-success';
-                matchStatus.innerHTML = '✅ Perfect match! Number of names matches number of bundles.';
+                matchStatus.innerHTML = '✅ Perfect match! JWTs and bundle names align with bundle IDs.';
+            } else {
+                matchStatus.style.display = 'block';
+                matchStatus.className = 'match-status match-warning';
+                matchStatus.innerHTML = warnings.join('<br>');
             }
         } else {
             matchStatus.style.display = 'none';
         }
+    }
+
+    function getJwtForIndex(index) {
+        if (jwts.length === 0) return '';
+        return index < jwts.length ? jwts[index] : jwts[jwts.length - 1];
     }
     
     function getNameForIndex(index) {
@@ -741,8 +805,6 @@ My Bundle 3
         resumeButton.style.display = 'none';
         pauseButton.style.display = 'inline-block';
         addLog('Processing resumed', 'info');
-        // Continue processing
-        processBundles();
     }
     
     function updateStepIndicator(step, status) {
@@ -773,21 +835,23 @@ My Bundle 3
     
     async function startProcessing() {
         if (isProcessing) return;
-        
-        // Validate inputs
-        jwtToken = document.getElementById('jwtToken').value.trim();
-        if (!jwtToken) {
-            showNotification('Please enter a JWT token', 'error');
+
+        updateStats();
+
+        if (jwts.length === 0) {
+            showNotification('Please enter at least one JWT token', 'error');
             return;
         }
-        
-        updateStats();
-        
+
         if (totalBundles === 0) {
             showNotification('No bundle IDs found. Please enter bundle IDs.', 'error');
             return;
         }
-        
+
+        // Read delay once at start
+        const delay = getCurrentDelay();
+        delayInput.value = delay;
+
         // Reset state
         isProcessing = true;
         isPaused = false;
@@ -810,19 +874,22 @@ My Bundle 3
         bundlesList.innerHTML = '';
         bundleIdList.textContent = 'Processing...';
         
-        addLog(`Starting to process ${totalBundles} bundles with ${PROCESS_DELAY/1000} second delay between each`, 'info');
-        addLog(`Total names provided: ${bundleNames.length}`, 'info');
+        addLog(`Starting to process ${totalBundles} bundles`, 'info');
+        addLog(`JWTs: ${jwts.length} | Names: ${bundleNames.length} | Delay: ${delay}ms`, 'info');
         addLog(`⚠️ WARNING: This will CLEAR ALL CARDS from each bundle and then DELETE the bundle!`, 'warning');
-        
-        if (bundleNames.length < totalBundles) {
+
+        if (jwts.length < totalBundles) {
+            addLog(`Note: Only ${jwts.length} JWT(s) provided. Last JWT will be repeated for remaining bundles.`, 'warning');
+        }
+        if (bundleNames.length > 0 && bundleNames.length < totalBundles) {
             addLog(`Note: Only ${bundleNames.length} name(s) provided. Last name "${bundleNames[bundleNames.length-1] || 'Bundle'}" will be repeated for remaining bundles.`, 'warning');
         }
-        
+
         // Process each bundle
-        await processBundles();
+        await processBundles(delay);
     }
     
-    async function processBundles() {
+    async function processBundles(delay) {
         for (let i = currentBundleIndex; i < totalBundles && isProcessing && !stopProcessing; i++) {
             // Check if paused
             while (isPaused && isProcessing && !stopProcessing) {
@@ -834,9 +901,11 @@ My Bundle 3
             currentBundleIndex = i;
             const bundleId = bundleIds[i];
             const bundleName = getNameForIndex(i);
+            const jwtToken = getJwtForIndex(i);
+            const jwtIndex = Math.min(i, jwts.length - 1);
             const bundleNumber = i + 1;
             
-            addLog(`\n=== Processing bundle ${bundleNumber}/${totalBundles} (ID: ${bundleId}, Name: "${bundleName}") ===`, 'info');
+            addLog(`\n=== Processing bundle ${bundleNumber}/${totalBundles} (ID: ${bundleId}, Name: "${bundleName}") — JWT #${jwtIndex + 1} ===`, 'info');
             
             let bundleDeleted = false;
             let cardsRemoved = 0;
@@ -847,7 +916,7 @@ My Bundle 3
                 addLog(`Step 1: Getting bundle info for ${bundleId}...`, 'info');
                 updateStepIndicator('clear', 'active');
                 
-                const bundleInfo = await getBundleInfo(bundleId);
+                const bundleInfo = await getBundleInfo(bundleId, jwtToken);
                 originalCardCount = bundleInfo?.entityCount || bundleInfo?.cards?.length || 0;
                 
                 addLog(`Bundle ${bundleId} has ${originalCardCount} cards`, 'info');
@@ -856,7 +925,7 @@ My Bundle 3
                 if (originalCardCount > 0) {
                     addLog(`Step 2: Removing ${originalCardCount} cards from bundle ${bundleId}...`, 'info');
                     
-                    const removeSuccess = await removeCardsFromBundle(bundleId, bundleName);
+                    const removeSuccess = await removeCardsFromBundle(bundleId, bundleName, jwtToken);
                     
                     if (removeSuccess) {
                         cardsRemoved = originalCardCount;
@@ -875,7 +944,7 @@ My Bundle 3
                 addLog(`Step 3: Deleting bundle ${bundleId}...`, 'info');
                 updateStepIndicator('delete', 'active');
                 
-                const deleteSuccess = await deleteBundle(bundleId);
+                const deleteSuccess = await deleteBundle(bundleId, jwtToken);
                 
                 if (deleteSuccess) {
                     bundleDeleted = true;
@@ -889,6 +958,7 @@ My Bundle 3
                 processedBundles.push({
                     id: bundleId,
                     name: bundleName,
+                    jwtIndex: jwtIndex,
                     originalCardCount: originalCardCount,
                     cardsRemoved: cardsRemoved,
                     deleted: bundleDeleted,
@@ -922,6 +992,7 @@ My Bundle 3
                 processedBundles.push({
                     id: bundleId,
                     name: bundleName,
+                    jwtIndex: jwtIndex,
                     originalCardCount: originalCardCount,
                     cardsRemoved: cardsRemoved,
                     deleted: bundleDeleted,
@@ -945,8 +1016,8 @@ My Bundle 3
             
             // Delay before next bundle (unless it's the last one or we're stopping)
             if (i < totalBundles - 1 && !stopProcessing && isProcessing) {
-                addLog(`Waiting ${PROCESS_DELAY/1000} seconds before next bundle...`, 'info');
-                await sleep(PROCESS_DELAY);
+                addLog(`Waiting ${delay}ms before next bundle...`, 'info');
+                await sleep(delay);
             }
         }
         
@@ -973,7 +1044,7 @@ My Bundle 3
         }
     }
     
-    async function getBundleInfo(bundleId) {
+    async function getBundleInfo(bundleId, jwtToken) {
         const endpoint = `/bundles/${bundleId}`;
         const headers = {
             'Content-Type': 'application/json',
@@ -984,7 +1055,6 @@ My Bundle 3
             const response = await sendProxyRequest(endpoint, 'GET', headers);
             
             if (response && response.success === true) {
-                // Check both possible response structures
                 if (response.data) {
                     return response.data;
                 } else if (response.data && response.data.data) {
@@ -998,7 +1068,7 @@ My Bundle 3
         }
     }
     
-    async function removeCardsFromBundle(bundleId, bundleName) {
+    async function removeCardsFromBundle(bundleId, bundleName, jwtToken) {
         const endpoint = `/bundles/${bundleId}`;
         const headers = {
             'Content-Type': 'application/json',
@@ -1008,7 +1078,7 @@ My Bundle 3
         const body = {
             name: bundleName,
             description: "",
-            cardIds: [] // Empty array to remove all cards
+            cardIds: []
         };
         
         console.log('Sending PATCH request to remove cards from bundle:', { endpoint, headers, body });
@@ -1018,9 +1088,8 @@ My Bundle 3
             console.log('Remove cards response:', response);
             
             if (response && response.success === true) {
-                // Verify that cards were removed
-                await sleep(1000); // Short delay to allow update
-                const verifyInfo = await getBundleInfo(bundleId);
+                await sleep(1000);
+                const verifyInfo = await getBundleInfo(bundleId, jwtToken);
                 const newCardCount = verifyInfo?.entityCount || verifyInfo?.cards?.length || 0;
                 
                 if (newCardCount === 0) {
@@ -1043,7 +1112,7 @@ My Bundle 3
         }
     }
     
-    async function deleteBundle(bundleId) {
+    async function deleteBundle(bundleId, jwtToken) {
         const endpoint = `/bundles/${bundleId}`;
         const headers = {
             'Content-Type': 'application/json',
@@ -1072,10 +1141,13 @@ My Bundle 3
     }
     
     async function verifyAllBundles() {
-        if (!jwtToken) {
-            showNotification('Please enter a JWT token first', 'error');
+        if (jwts.length === 0) {
+            showNotification('Please enter at least one JWT token first', 'error');
             return;
         }
+
+        // Use first JWT for verification
+        const jwtToken = jwts[0];
         
         const endpoint = '/bundles';
         const headers = {
@@ -1083,7 +1155,7 @@ My Bundle 3
             'x-user-jwt': jwtToken
         };
         
-        addLog('Fetching all bundles to verify...', 'info');
+        addLog('Fetching all bundles to verify (using JWT #1)...', 'info');
         
         try {
             const response = await sendProxyRequest(endpoint, 'GET', headers);
@@ -1101,7 +1173,6 @@ My Bundle 3
                 
                 addLog(`Found ${bundlesData.length} total bundles in account`, 'success');
                 
-                // Display verification results
                 displayVerificationResults(bundlesData);
                 
                 return bundlesData;
@@ -1125,7 +1196,6 @@ My Bundle 3
             return;
         }
         
-        // Sort by creation date (newest first)
         bundles.sort((a, b) => new Date(b.created) - new Date(a.created));
         
         let html = '<h3>All Bundles in Account (Verification)</h3>';
@@ -1155,7 +1225,6 @@ My Bundle 3
             return;
         }
         
-        // Create a simple list of deleted bundle IDs
         const deletedIds = processedBundles
             .filter(bundle => bundle.status === 'success' && bundle.deleted)
             .map(bundle => bundle.id)
@@ -1163,7 +1232,6 @@ My Bundle 3
         
         bundleIdList.textContent = deletedIds || 'No bundles deleted';
         
-        // Also create a more detailed display
         let html = '<h3>Processed Bundles</h3>';
         
         if (processedBundles.length === 0) {
@@ -1178,6 +1246,7 @@ My Bundle 3
                     <div class="${itemClass}">
                         <strong>${bundle.name}</strong> (ID: ${bundle.id})
                         <span class="status-badge ${statusClass}">${statusText}</span>
+                        <span class="status-badge" style="background-color:#e8f4f8;color:#2980b9;">JWT #${(bundle.jwtIndex ?? 0) + 1}</span>
                         <div class="before-after" style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px;">
                             <span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 3px;">Cards Removed: ${bundle.cardsRemoved || 0}</span>
                             <span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 3px;">${bundle.deleted ? '🗑️ Deleted' : '❌ Not Deleted'}</span>
@@ -1198,8 +1267,6 @@ My Bundle 3
         logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
         
         logContainer.appendChild(logEntry);
-        
-        // Auto-scroll to bottom
         logContainer.scrollTop = logContainer.scrollHeight;
     }
     
@@ -1208,7 +1275,6 @@ My Bundle 3
         notification.className = `notification notification-${type}`;
         notification.style.display = 'block';
         
-        // Auto-hide after 5 seconds
         setTimeout(() => {
             notification.style.display = 'none';
         }, 5000);
