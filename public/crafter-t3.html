@@ -1074,6 +1074,7 @@
     }
     
     // Get cards from a collection
+    // Only returns cards with status "available" (not on market, not locked)
     async function getCollectionCards(authToken, senderID, collectionId) {
         const headers = {
             'Content-Type': 'application/json',
@@ -1085,15 +1086,17 @@
         try {
             const response = await sendProxyRequest(endpoint, 'GET', headers);
             
+            let cards = [];
             if (response?.data?.cards) {
-                return response.data.cards;
+                cards = response.data.cards;
             } else if (Array.isArray(response?.data)) {
-                return response.data;
+                cards = response.data;
             } else if (Array.isArray(response)) {
-                return response;
+                cards = response;
             }
             
-            return [];
+            // Only use cards that are available (not on market, not locked)
+            return cards.filter(card => card.status === 'available');
         } catch (error) {
             console.error(`Error fetching cards for collection ${collectionId}:`, error);
             throw error;

@@ -258,6 +258,7 @@
 <script>
     // ============ Config ============
     const PROXY_URL = '/proxy';
+    const PAGE_SIZE = 50;   // API returns up to 50 bundles per page
 
     // ============ State ============
     let isScanning = false;
@@ -381,6 +382,7 @@
 
             const batch = result.bundles;
 
+            // Nothing returned → no more pages
             if (batch.length === 0) {
                 addLog(`  ✓ ${label}: page ${page} empty — no more pages`, 'info');
                 break;
@@ -392,16 +394,19 @@
 
             addLog(`  ↻ ${label}: page ${page} → ${batch.length} bundles (total so far: ${collected.length}${totalReported !== null ? ' / ' + totalReported : ''})`, 'info');
 
-            // Reached total → done
-            if (totalReported !== null && collected.length >= totalReported) {
-                break;
-            }
-            // Short page → likely last page
-            if (batch.length < 50) {
+            // Only stop when a page is NOT full. A full page means there may be
+            // more data even if the reported total has already been reached
+            // (total can be stale / under-reported).
+            if (batch.length < PAGE_SIZE) {
+                addLog(`  ✓ ${label}: page ${page} returned ${batch.length} < ${PAGE_SIZE} — last page`, 'info');
                 break;
             }
 
             page++;
+        }
+
+        if (page > maxPages) {
+            addLog(`  ⚠ ${label}: reached max pages cap (${maxPages})`, 'warning');
         }
 
         return collected;
