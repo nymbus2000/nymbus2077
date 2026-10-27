@@ -757,14 +757,7 @@ const FUNDS_URL = '/user/funds';
     stopButton.addEventListener('click', stopProcessing);
     downloadButton.addEventListener('click', downloadResults);
 
-    // ================= NAV LOADER (optional) =================
-    fetch('/nav-loader.js').then(r => r.text()).then(script => {
-        if (script && !script.includes('404')) {
-            const s = document.createElement('script');
-            s.textContent = script;
-            document.head.appendChild(s);
-        }
-    }).catch(() => {});
+
 </script>
 </body>
 </html>

@@ -372,7 +372,7 @@
         </div>
         
         <div class="input-section">
-            <h2>Crafting Configuration</h2>
+            <h2>Crafting Configuration - Occult</h2>
             
             <div class="input-group">
                 <label for="craftingPlanId">Crafting Plan ID:</label>
@@ -416,20 +416,20 @@
 <script src="/nav-loader.js"></script>
 <script>
     // Configuration
-    const DEFAULT_OPERATION_DELAY = 3400;
+    const DEFAULT_OPERATION_DELAY = 5700;
     
     // Collections mapping for each requirement
     const REQUIREMENTS_CONFIG = {
-        3235: {
-            collectionIds: [17920, 17921, 17922],
+        3400: {
+            collectionIds: [22639],
+            cardsPerCraft: 32
+        },
+        3401: {
+            collectionIds: [22640],
             cardsPerCraft: 16
         },
-        3236: {
-            collectionIds: [17923, 17924, 17925],
-            cardsPerCraft: 8
-        },
-        3237: {
-            collectionIds: [17953, 17986, 17987],
+        3402: {
+            collectionIds: [22672],
             cardsPerCraft: 4
         }
     };
@@ -476,10 +476,10 @@
             const config = await response.json();
             
             // Populate fields
-            craftingPlanIdInput.value = config.craftingPlanId || '3202';
+            craftingPlanIdInput.value = config.craftingPlanId || '3367';
             silvercoinsInput.value = config.silvercoins || 5000;
             maxCraftsInput.value = config.maxCrafts || 10;
-            operationDelayInput.value = config.operationDelay || 3400;
+            operationDelayInput.value = config.operationDelay || 5700;
             
             // Populate requirements
             if (config.requirements && Array.isArray(config.requirements)) {
@@ -491,9 +491,9 @@
             console.error('Error loading config:', error);
             // Use default requirements if loading fails
             renderRequirements([
-                { requirementId: 3235, cardsPerCraft: 16, collectionIds: [17920, 17921, 17922] },
-                { requirementId: 3236, cardsPerCraft: 8, collectionIds: [17923, 17924, 17925] },
-                { requirementId: 3237, cardsPerCraft: 4, collectionIds: [17953, 17986, 17987] }
+                { requirementId: 3400, cardsPerCraft: 32, collectionIds: [22639] },
+                { requirementId: 3401, cardsPerCraft: 16, collectionIds: [22640] },
+                { requirementId: 3402, cardsPerCraft: 4, collectionIds: [22672] }
             ]);
             showConfigStatus('Using default configuration', 'info');
         }
@@ -586,7 +586,7 @@
             craftingPlanId: craftingPlanIdInput.value.trim(),
             silvercoins: parseInt(silvercoinsInput.value) || 5000,
             maxCrafts: parseInt(maxCraftsInput.value) || 10,
-            operationDelay: parseInt(operationDelayInput.value) || 3400
+            operationDelay: parseInt(operationDelayInput.value) || 5700
         };
         
         if (config.requirements.length === 0) {
@@ -617,14 +617,14 @@
     async function loadDefaultConfiguration() {
         const defaultConfig = {
             requirements: [
-                { requirementId: 3235, cardsPerCraft: 16, collectionIds: [17920, 17921, 17922] },
-                { requirementId: 3236, cardsPerCraft: 8, collectionIds: [17923, 17924, 17925] },
-                { requirementId: 3237, cardsPerCraft: 4, collectionIds: [17953, 17986, 17987] }
+                { requirementId: 3400, cardsPerCraft: 32, collectionIds: [22639] },
+                { requirementId: 3401, cardsPerCraft: 16, collectionIds: [22640] },
+                { requirementId: 3402, cardsPerCraft: 4, collectionIds: [22672] }
             ],
-            craftingPlanId: "3202",
+            craftingPlanId: "3367",
             silvercoins: 5000,
             maxCrafts: 10,
-            operationDelay: 3400
+            operationDelay: 5700
         };
         
         try {
@@ -1113,7 +1113,7 @@
             'x-user-jwt': authToken
         };
         
-        const craftingPlanId = craftingPlanIdInput.value.trim() || '3202';
+        const craftingPlanId = craftingPlanIdInput.value.trim() || '3367';
         const silvercoins = parseInt(silvercoinsInput.value) || 5000;
         
         const endpoint = `/crafting/plans/${craftingPlanId}`;

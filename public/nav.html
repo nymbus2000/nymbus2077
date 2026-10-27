@@ -2,22 +2,46 @@
 <style>
     .nav-bar {
         background: white;
-        padding: 8px 12px;
+        padding: 10px 14px;
         border-radius: 6px;
         margin-bottom: 15px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 6px;
     }
-    .nav-links {
+    .nav-group {
         display: flex;
-        gap: 4px;
+        align-items: center;
         flex-wrap: wrap;
-        flex: 1;
+        gap: 2px;
+        padding-bottom: 1px;
+        border-bottom: 1px dashed #eee;
     }
+    .nav-group:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .nav-group-label {
+        display: inline-block;
+        min-width: 24px;
+        padding: 2px 8px;
+        margin-right: 4px;
+        border-radius: 3px;
+        font-size: 8px;
+        font-weight: 300;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: white;
+        text-align: center;
+    }
+    .nav-group-label.occult  { background-color: #8e44ad; }
+    .nav-group-label.bundles { background-color: #16a085; }
+    .nav-group-label.market  { background-color: #2980b9; }
+    .nav-group-label.offers  { background-color: #d35400; }
+    .nav-group-label.packs   { background-color: #c0392b; }
+    .nav-group-label.misc    { background-color: #7f8c8d; }
+
     .nav-link {
         padding: 4px 10px;
         text-decoration: none;
@@ -43,115 +67,68 @@
         color: #666;
         font-size: 11px;
         white-space: nowrap;
-        padding-left: 10px;
-        border-left: 1px solid #e0e0e0;
-        margin-left: 5px;
+        padding-top: 4px;
+        text-align: center;
     }
-
-    /* ---- Proxy row ---- */
-    .proxy-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 8px;
-        padding: 8px 10px;
-        background: #fff7ed;
-        border: 1px solid #fed7aa;
-        border-radius: 6px;
-        font-size: 12px;
-    }
-    .proxy-row label {
-        font-weight: 600;
-        color: #9a3412;
-        white-space: nowrap;
-    }
-    .proxy-row input {
-        flex: 1;
-        min-width: 260px;
-        padding: 5px 10px;
-        border: 1px solid #fdba74;
-        border-radius: 6px;
-        font-family: monospace;
-        font-size: 11px;
-        background: #fff;
-    }
-    .proxy-row input:focus {
-        outline: none;
-        border-color: #ea580c;
-        box-shadow: 0 0 0 2px rgba(234,88,12,0.15);
-    }
-    .proxy-row .proxy-status {
-        font-size: 11px;
-        color: #9a3412;
-        white-space: nowrap;
-    }
-    .proxy-row .proxy-status.on {
-        color: #15803d;
-        font-weight: 700;
-    }
-
     @media (max-width: 768px) {
-        .nav-bar {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        .server-info {
-            border-left: none;
-            padding-left: 0;
-            margin-left: 0;
-            text-align: center;
-            padding-top: 6px;
-            border-top: 1px solid #e0e0e0;
-        }
-        .proxy-row input {
-            min-width: 0;
+        .nav-group-label {
+            min-width: 48px;
+            font-size: 10px;
         }
     }
 </style>
 
 <div class="nav-bar">
-    <div class="nav-links">
+
+    <div class="nav-group">
+        <span class="nav-group-label occult">Gnrl</span>
         <a href="/refresher.html" class="nav-link">refresher</a>
         <a href="/achiv.html" class="nav-link">Achievements</a>
-        <a href="/brewer.html" class="nav-link">Brewer</a>
-        <a href="/brewer2.html" class="nav-link">Brewer 2</a>
+        <a href="/crafter.html" class="nav-link">Card Crafter Occult</a>
+        <a href="/crafter-2.html" class="nav-link">Card Crafter Tarot</a>
+        <a href="/crafter-t3.html" class="nav-link">Card Crafter t3</a>
+        <a href="/scanner.html" class="nav-link">Collection Scanner</a>
+        <a href="/spinner.html" class="nav-link">Spinner Pro</a>
+    </div>
+
+    <div class="nav-group">
+        <span class="nav-group-label bundles">Bndl</span>
         <a href="/bundle-buy.html" class="nav-link">Bundle Buy</a>
-        <a href="/bundle-creator.html" class="nav-link">Bundle Creator</a>
         <a href="/bundle-creator-multi.html" class="nav-link">Bundle Creator Multi</a>
         <a href="/bundle-list-by-id.html" class="nav-link">Bundle List by ID</a>
         <a href="/bundle-list-by-id-multi.html" class="nav-link">Bundle List by ID Multi</a>
         <a href="/bundle-price-change.html" class="nav-link">Bundle Price Change</a>
+        <a href="/bundles-scan.html" class="nav-link">Bundle Scan</a>
         <a href="/bundle-remove-delete.html" class="nav-link">Bundle Remove/Delete</a>
-        <a href="/crafter.html" class="nav-link">Card Crafter</a>
-        <a href="/crafter-old.html" class="nav-link">Card Crafter (Old)</a>
+    </div>
+
+    <div class="nav-group">
+        <span class="nav-group-label market">Mrkt</span>
         <a href="/lister.html" class="nav-link">Card Lister</a>
-        <a href="/lister-multi-acc.html" class="nav-link">Card Lister (Multi-Acc)</a>
-        <a href="/market-offers-scan.html" class="nav-link">Market Offers Scan</a>
-        <a href="/multi-accept-offer.html" class="nav-link">Multi Accept Offer</a>
-        <a href="/multi-offer-make.html" class="nav-link">Multi Offer Make</a>
-        <a href="/multi-price-changer.html" class="nav-link">Multi Price Changer</a>
+        <a href="/lister-multi-acc.html" class="nav-link">Card Lister mlt</a>
+        <a href="/multi-price-changer.html" class="nav-link">Price+Offer Changer mlt</a>
+        <a href="/multi-price-changer-wo-offer.html" class="nav-link">Price Changer without offer</a>
+        <a href="/delister-multi-acc.html" class="nav-link">Delister mlt</a>
+    </div>
+
+    <div class="nav-group">
+        <span class="nav-group-label offers">Offr</span>
+        <a href="/market-offers-scan.html" class="nav-link">Offers Scan</a>
+        <a href="/multi-accept-offer.html" class="nav-link">Offer Accept mlt</a>
+        <a href="/multi-offer-make.html" class="nav-link">Offer Make mlt</a>
+    </div>
+
+    <div class="nav-group">
+        <span class="nav-group-label packs">Pack</span>
         <a href="/pack-buy-open-CS.html" class="nav-link">Packs buy-open CS</a>
         <a href="/pack-buy-open-KL.html" class="nav-link">Packs buy-open KL</a>
         <a href="/pack-lister.html" class="nav-link">Pack Lister</a>
         <a href="/pack-multi-open.html" class="nav-link">Pack Multi-Open</a>
         <a href="/pack-multi-scan.html" class="nav-link">Pack Multi-Scan</a>
         <a href="/pack-solo-scan-open.html" class="nav-link">Pack Solo Scan/Open</a>
-        <a href="/scanner.html" class="nav-link">Collection Scanner</a>
-        <a href="/scanner-old.html" class="nav-link">Collection Scanner (Old)</a>
-        <a href="/spinner.html" class="nav-link">Spinner Pro</a>
-        <!-- Add new links here as you create new pages -->
     </div>
-    <!--<div class="server-info" id="serverInfo">Loading server info...</div>-->
-</div>
 
-<!-- Proxy row: separate line, after all nav buttons -->
-<div class="proxy-row" id="proxy-input-wrap">
-    <label for="proxy-input-field">🌐 Proxy</label>
-    <input id="proxy-input-field" type="text"
-        placeholder="socks5://user:pass@1.2.3.4:1080  (empty = no proxy · cleared on reload)"
-        autocomplete="off" spellcheck="false">
-    <span class="proxy-status" id="proxy-input-status">off</span>
+    <!-- <div class="server-info" id="serverInfo">Loading server info...</div> -->
 </div>
 
 <script>
