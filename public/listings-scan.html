@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Crafter - Multi-Account Crafting Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1<!DOCTYPE html>
+<html>
+<head>
+    <title>Listed Items Scanner</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        h1 { color: #2c3e50; margin-bottom: 20px; }
+        .config-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        textarea { height: 90px; font-family: monospace; font-size: 13px; resize: vertical; }
+        .row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
+        .row .field { flex: 1; min-width: 180px; }
+        .row .field input,
+        .row .field select { margin-bottom: 0; }
+
+        .button-group { display: flex; gap: 10px; margin: 20px 0 0; flex-wrap: wrap; }
+        button {
+            padding: 11px 22px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            font-size: 14px;
+        }
+        button:hover:not(:disabled) { background-color: #2980b9; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; opacity: 0.7; }
+        .btn-scan { background-color: #3498db; }
+        .btn-stop { background-color: #e74c3c; }
+        .btn-stop:hover:not(:disabled) { background-color: #c0392b; }
+        .btn-csv { background-color: #27ae60; }
+        .btn-csv:hover:not(:disabled) { background-color: #1e8449; }
+        .btn-clear { background-color: #95a5a6; }
+        .btn-clear:hover:not(:disabled) { background-color: #7f8c8d; }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .stat-item { text-align: center; flex: 1; min-width: 120px; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #3498db; }
+        .stat-label { font-size: 13px; color: #7f8c8d; }
+
+        .progress-container {
+            width: 100%;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            margin: 15px 0;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            height: 8px;
+            background-color: #2ecc71;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 600px;
+            display: none;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            background: #f8fafc;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #1e293b;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        tbody td {
+            padding: 10px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+        tbody tr:hover td { background: #fafcff; }
+        .mono { font-family: 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
+        .price { font-weight: 600; color: #16a34a; }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        .status-market { background: #dbeafe; color: #1e40af; }
+        .status-other  { background: #f1f5f9; color: #475569; }
+
+        .log-container {
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .log-entry { padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
+        .log-success { color: #27ae60; }
+        .log-error { color: #e74c3c; }
+        .log-info { color: #3498db; }
+        .log-warning { color: #f39c12; }
+
+        .notification {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+            font-weight: 500;
+        }
+        .notification-success { background: #d5f4e6; color: #27ae60; border: 1px solid #a3e4c3; }
+        .notification-error { background: #fadbd8; color: #e74c3c; border: 1px solid #f5b7b1; }
+        .notification-info { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .small-note { font-size: 12px; color: #7f8c8d; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+    <h1>📋 Listed Items Scanner</h1>
+
+    <div class="config-section">
+        <div class="row">
+            <div class="field" style="flex: 3;">
+                <label for="jwtInput">JWT Token:</label>
+                <input type="text" id="jwtInput" placeholder="Paste your JWT token here (x-user-jwt)" />
+            </div>
+            <div class="field" style="flex: 1;">
+                <label for="userIdInput">User ID:</label>
+                <input type="text" id="userIdInput" placeholder="e.g. 12344" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="field">
+                <label for="categoryInput">Category:</label>
+<select id="categoryInput">
+    <option value="1" selected>CS (1)</option>
+    <option value="2">Str (2)</option>
+    <option value="73">KL (73)</option>
+    <option value="205">EWC (205)</option>
+</select>
+            </div>
+            <div class="field">
+                <label for="typeInput">Type:</label>
+                <select id="typeInput">
+                    <option value="card" selected>Card</option>
+                    <option value="sticker">Sticker</option>
+                    <option value="bundle">Bundle</option>
+                    <option value="pack">Pack</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="delayInput">Delay between pages (ms):</label>
+                <input type="number" id="delayInput" value="1000" min="0" step="100" />
+            </div>
+            <div class="field">
+                <label for="maxPagesInput">Max pages (safety cap):</label>
+                <input type="number" id="maxPagesInput" value="1000" min="1" />
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="scanBtn" class="btn-scan">▶ Scan Listings</button>
+            <button id="stopBtn" class="btn-stop" style="display: none;">⏹ Stop</button>
+            <button id="downloadBtn" class="btn-csv" disabled>⬇ Download CSV</button>
+            <button id="clearBtn" class="btn-clear">🗑 Clear</button>
+        </div>
+
+        <div id="notification" class="notification"></div>
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat-item">
+            <div class="stat-value" id="statPages">0</div>
+            <div class="stat-label">Pages Fetched</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statItems">0</div>
+            <div class="stat-label">Items Collected</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statReported">—</div>
+            <div class="stat-label">API Reported Total</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statErrors">0</div>
+            <div class="stat-label">Errors</div>
+        </div>
+    </div>
+
+    <div class="table-container" id="tableContainer">
+        <table id="resultsTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="log-container" id="logContainer">
+        <div class="log-entry log-info">Ready. Paste JWT + User ID, choose category &amp; type, then click "Scan Listings".</div>
+    </div>
+
+<script src="/nav-loader.js"></script>
+<script>
+    // ============ Config ============
+    const PROXY_URL = '/proxy';
+    const PAGE_SIZE = 40;
+
+    // ============ Column definitions per type ============
+    // Each column: { key, label, get(marketItem, index) -> value, class? }
+    const COMMON_COLUMNS = [
+        { key: '_idx',      label: '#',           get: (_m, i) => i + 1 },
+        { key: 'marketId',  label: 'Market ID',   get: m => m?.marketId,   class: 'mono' },
+        { key: 'price',     label: 'Price',       get: m => m?.price,      class: 'price' },
+        { key: 'minOffer',  label: 'Min Offer',   get: m => m?.minOffer },
+        { key: 'type',      label: 'Type',        get: m => m?.type,       badge: true }
+    ];
+
+    const TYPE_COLUMNS = {
+        card: [
+            { key: 'card.id',              label: 'Card ID',       get: m => m?.card?.id,             class: 'mono' },
+            { key: 'card.status',          label: 'Status',        get: m => m?.card?.status },
+            { key: 'card.mintBatch',       label: 'Mint Batch',    get: m => m?.card?.mintBatch },
+            { key: 'card.mintNumber',      label: 'Mint #',        get: m => m?.card?.mintNumber },
+            { key: 'card.rating',          label: 'Rating',        get: m => m?.card?.rating },
+            { key: 'card.cardTemplateId',  label: 'Template ID',   get: m => m?.card?.cardTemplateId, class: 'mono' },
+            { key: 'card.source',          label: 'Source',        get: m => m?.card?.source }
+        ],
+        sticker: [
+            { key: 'sticker.id',                  label: 'Sticker ID',     get: m => m?.sticker?.id,             class: 'mono' },
+            { key: 'sticker.status',              label: 'Status',         get: m => m?.sticker?.status },
+            { key: 'sticker.mintBatch',           label: 'Mint Batch',     get: m => m?.sticker?.mintBatch },
+            { key: 'sticker.mintNumber',          label: 'Mint #',         get: m => m?.sticker?.mintNumber },
+            { key: 'sticker.rating',              label: 'Rating',         get: m => m?.sticker?.rating },
+            { key: 'sticker.stickerTemplateId',   label: 'Template ID',    get: m => m?.sticker?.stickerTemplateId, class: 'mono' },
+            { key: 'sticker.template.title',      label: 'Template Title', get: m => m?.sticker?.stickerTemplate?.title },
+            { key: 'sticker.template.inCirc',     label: 'In Circulation', get: m => m?.sticker?.stickerTemplate?.inCirculation },
+            { key: 'sticker.template.rarity',     label: 'Rarity',         get: m => m?.sticker?.stickerTemplate?.rarity }
+        ],
+        bundle: [
+            { key: 'bundle.id',           label: 'Bundle ID',     get: m => m?.bundle?.id,           class: 'mono' },
+            { key: 'bundle.description',  label: 'Description',   get: m => m?.bundle?.description },
+            { key: 'bundle.name',         label: 'Name',          get: m => m?.bundle?.name },
+            { key: 'bundle.entityCount',  label: 'Entity Count',  get: m => m?.bundle?.entityCount },
+            { key: 'bundle.rating',       label: 'Rating',        get: m => m?.bundle?.rating },
+            { key: 'bundle.status',       label: 'Status',        get: m => m?.bundle?.status }
+        ],
+        pack: [
+            { key: 'pack.id',                     label: 'Pack ID',          get: m => m?.pack?.id,                            class: 'mono' },
+            { key: 'pack.type',                   label: 'Pack Type',        get: m => m?.pack?.type },
+            { key: 'pack.packTemplate.name',      label: 'Template Name',    get: m => m?.pack?.packTemplate?.name },
+            { key: 'pack.packTemplate.id',        label: 'Template ID',      get: m => m?.pack?.packTemplate?.id,              class: 'mono' },
+            { key: 'pack.packTemplate.entityCount',   label: 'Entity Count',     get: m => m?.pack?.packTemplate?.entityCount },
+            { key: 'pack.packTemplate.inventoryCount',label: 'Inventory Count',  get: m => m?.pack?.packTemplate?.inventoryCount },
+            { key: 'pack.packTemplate.mintCount',     label: 'Mint Count',       get: m => m?.pack?.packTemplate?.mintCount },
+            { key: 'pack.packTemplate.openedCount',   label: 'Opened Count',     get: m => m?.pack?.packTemplate?.openedCount }
+        ]
+    };
+
+    function getColumnsFor(type) {
+        return [...COMMON_COLUMNS, ...(TYPE_COLUMNS[type] || [])];
+    }
+
+    // ============ State ============
+    let isScanning = false;
+    let stopFlag = false;
+    let allItems = [];         // flat array of raw market objects
+    let pagesFetched = 0;
+    let errorsCount = 0;
+    let reportedTotal = null;
+    let currentColumns = [];
+    let currentType = 'card';
+
+    // ============ DOM ============
+    const $ = id => document.getElementById(id);
+    const jwtInput = $('jwtInput');
+    const userIdInput = $('userIdInput');
+    const categoryInput = $('categoryInput');
+    const typeInput = $('typeInput');
+    const delayInput = $('delayInput');
+    const maxPagesInput = $('maxPagesInput');
+    const scanBtn = $('scanBtn');
+    const stopBtn = $('stopBtn');
+    const downloadBtn = $('downloadBtn');
+    const clearBtn = $('clearBtn');
+    const notification = $('notification');
+    const progressContainer = $('progressContainer');
+    const progressBar = $('progressBar');
+    const tableContainer = $('tableContainer');
+    const tableHead = $('tableHead');
+    const tableBody = $('tableBody');
+    const logContainer = $('logContainer');
+
+    // ============ Helpers ============
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+    function getDelay() {
+        const v = parseInt(delayInput.value, 10);
+        return isNaN(v) || v < 0 ? 1000 : v;
+    }
+    function getMaxPages() {
+        const v = parseInt(maxPagesInput.value, 10);
+        return isNaN(v) || v < 1 ? 1000 : v;
+    }
+    function addLog(msg, type = 'info') {
+        const entry = document.createElement('div');
+        entry.className = `log-entry log-${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logContainer.appendChild(entry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+    function showNotification(msg, type = 'info') {
+        notification.textContent = msg;
+        notification.className = `notification notification-${type}`;
+        notification.style.display = 'block';
+        setTimeout(() => { notification.style.display = 'none'; }, 5000);
+    }
+    function updateStats() {
+        $('statPages').textContent = pagesFetched;
+        $('statItems').textContent = allItems.length;
+        $('statReported').textContent = reportedTotal === null ? '—' : reportedTotal;
+        $('statErrors').textContent = errorsCount;
+    }
+    function toDisplay(v) {
+        if (v === null || v === undefined) return '';
+        if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+        return String(v);
+    }
+
+    // ============ Proxy ============
+    async function sendProxyRequest(endpoint, method = 'GET', headers = {}, data = null) {
+        const res = await fetch(PROXY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint, method, headers, data })
+        });
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`HTTP ${res.status}: ${errorText}`);
+        }
+        return await res.json();
+    }
+
+    // ============ Fetch one page ============
+    async function fetchPage(jwt, userId, categoryId, type, page) {
+        const endpoint = `/market/listed/users/${userId}?type=${type}&page=${page}&categoryIds=${categoryId}`;
+        const headers = {
+            'Content-Type': 'application/json',
+            'x-user-jwt': jwt
+        };
+        const response = await sendProxyRequest(endpoint, 'GET', headers, null);
+
+        // Unwrap: { success, data: { total, count, market } }
+        let payload = response;
+        if (payload && payload.data && (payload.data.market !== undefined || payload.data.total !== undefined)) {
+            payload = payload.data;
+        } else if (payload && payload.data && payload.data.data &&
+                   (payload.data.data.market !== undefined || payload.data.data.total !== undefined)) {
+            payload = payload.data.data;
+        }
+
+        const market = Array.isArray(payload?.market) ? payload.market : [];
+        const total  = (typeof payload?.total === 'number') ? payload.total : null;
+        return { market, total };
+    }
+
+    // ============ Fetch all pages ============
+    async function fetchAllPages(jwt, userId, categoryId, type) {
+        const maxPages = getMaxPages();
+        const delay = getDelay();
+        let page = 1;
+        let collected = [];
+
+        while (page <= maxPages) {
+            if (stopFlag) break;
+
+            let result;
+            try {
+                result = await fetchPage(jwt, userId, categoryId, type, page);
+            } catch (err) {
+                addLog(`  ✗ page ${page} failed: ${err.message}`, 'error');
+                errorsCount++;
+                updateStats();
+                break;
+            }
+
+            pagesFetched++;
+            if (reportedTotal === null && typeof result.total === 'number') {
+                reportedTotal = result.total;
+                addLog(`  ℹ API reports total=${reportedTotal}`, 'info');
+            }
+            updateStats();
+
+            const batch = result.market;
+
+            if (batch.length === 0) {
+                addLog(`  ✓ page ${page} empty — done`, 'info');
+                break;
+            }
+
+            collected.push(...batch);
+
+            // Progress bar based on reported total if known, else unknown-indeterminate style
+            if (reportedTotal && reportedTotal > 0) {
+                const pct = Math.min(100, (collected.length / reportedTotal) * 100);
+                progressBar.style.width = `${pct}%`;
+            } else {
+                // best-effort: show bar filling based on pages (caps at 95% until done)
+                progressBar.style.width = `${Math.min(95, page * 2)}%`;
+            }
+
+            addLog(`  ↻ page ${page} → ${batch.length} items (total so far: ${collected.length}${reportedTotal !== null ? ' / ' + reportedTotal : ''})`, 'info');
+
+            // If page returned fewer than PAGE_SIZE it's the last page
+            if (batch.length < PAGE_SIZE) {
+                addLog(`  ✓ page ${page} returned ${batch.length} < ${PAGE_SIZE} — last page`, 'info');
+                break;
+            }
+
+            page++;
+
+            if (page <= maxPages && !stopFlag && delay > 0) {
+                await sleep(delay);
+            }
+        }
+
+        if (page > maxPages) {
+            addLog(`  ⚠ reached max pages cap (${maxPages})`, 'warning');
+        }
+
+        return collected;
+    }
+
+    // ============ Render header ============
+    function renderHeader(type) {
+        currentColumns = getColumnsFor(type);
+        tableHead.innerHTML = '';
+        const tr = document.createElement('tr');
+        for (const col of currentColumns) {
+            const th = document.createElement('th');
+            th.textContent = col.label;
+            tr.appendChild(th);
+        }
+        tableHead.appendChild(tr);
+    }
+
+    // ============ Render rows ============
+    function renderTable() {
+        if (allItems.length === 0) {
+            tableContainer.style.display = 'none';
+            downloadBtn.disabled = true;
+            return;
+        }
+
+        renderHeader(currentType);
+
+        const frag = document.createDocumentFragment();
+        allItems.forEach((item, idx) => {
+            const tr = document.createElement('tr');
+            for (const col of currentColumns) {
+                const td = document.createElement('td');
+                const v = toDisplay(col.get(item, idx));
+
+                if (col.badge && v) {
+                    const statusClass = v === 'market' ? 'status-market' : 'status-other';
+                    td.innerHTML = `<span class="status-badge ${statusClass}">${v}</span>`;
+                } else {
+                    td.textContent = v;
+                }
+                if (col.class) td.className = col.class;
+                tr.appendChild(td);
+            }
+            frag.appendChild(tr);
+        });
+
+        tableBody.innerHTML = '';
+        tableBody.appendChild(frag);
+        tableContainer.style.display = 'block';
+        downloadBtn.disabled = false;
+    }
+
+    // ============ Main scan ============
+    async function scanListings() {
+        if (isScanning) return;
+
+        const jwt = jwtInput.value.trim();
+        const userId = userIdInput.value.trim();
+        const categoryId = categoryInput.value;
+        const type = typeInput.value;
+
+        if (!jwt) { showNotification('Please enter a JWT token', 'error'); return; }
+        if (!userId) { showNotification('Please enter a User ID', 'error'); return; }
+
+        // Reset
+        isScanning = true;
+        stopFlag = false;
+        allItems = [];
+        pagesFetched = 0;
+        errorsCount = 0;
+        reportedTotal = null;
+        currentType = type;
+        tableBody.innerHTML = '';
+        tableHead.innerHTML = '';
+        tableContainer.style.display = 'none';
+        downloadBtn.disabled = true;
+        updateStats();
+
+        renderHeader(type);
+
+        scanBtn.disabled = true;
+        stopBtn.style.display = 'inline-block';
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+
+        addLog(`Starting scan — user ${userId}, category ${categoryId}, type ${type}, delay ${getDelay()}ms`, 'info');
+
+        try {
+            const items = await fetchAllPages(jwt, userId, categoryId, type);
+            allItems = items;
+        } catch (err) {
+            errorsCount++;
+            addLog(`Scan failed: ${err.message}`, 'error');
+        }
+
+        isScanning = false;
+        scanBtn.disabled = false;
+        stopBtn.style.display = 'none';
+        progressContainer.style.display = 'none';
+
+        if (stopFlag) {
+            addLog('Scanning stopped by user', 'warning');
+            showNotification('Stopped', 'info');
+        } else {
+            addLog(`Done. ${allItems.length} items collected over ${pagesFetched} page(s)`, 'success');
+            showNotification(`Done! ${allItems.length} items found`, 'success');
+            progressBar.style.width = '100%';
+        }
+
+        updateStats();
+        renderTable();
+    }
+
+    function stopScan() {
+        stopFlag = true;
+        addLog('Stopping...', 'warning');
+    }
+
+    // ============ CSV ============
+    function downloadCSV() {
+        if (allItems.length === 0) {
+            showNotification('No data to download', 'error');
+            return;
+        }
+
+        const cols = getColumnsFor(currentType);
+        const escape = (v) => {
+            const s = String(v ?? '');
+            if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+                return '"' + s.replace(/"/g, '""') + '"';
+            }
+            return s;
+        };
+
+        let csv = cols.map(c => escape(c.label)).join(',') + '\n';
+        allItems.forEach((item, idx) => {
+            csv += cols.map(c => escape(toDisplay(c.get(item, idx)))).join(',') + '\n';
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const now = new Date();
+        const stamp = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}h${String(now.getMinutes()).padStart(2, '0')}`;
+        a.download = `listed_${currentType}_${userIdInput.value.trim() || 'user'}_${stamp}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showNotification('CSV downloaded', 'success');
+        addLog('CSV downloaded', 'info');
+    }
+
+    // ============ Clear ============
+    function clearAll() {
+        if (isScanning) {
+            showNotification('Cannot clear while scanning', 'error');
+            return;
+        }
+        allItems = [];
+        pagesFetched = 0;
+        errorsCount = 0;
+        reportedTotal = null;
+        tableBody.innerHTML = '';
+        tableHead.innerHTML = '';
+        tableContainer.style.display = 'none';
+        downloadBtn.disabled = true;
+        logContainer.innerHTML = '';
+        addLog('Cleared', 'info');
+        updateStats();
+    }
+
+    // ============ Events ============
+    scanBtn.addEventListener('click', scanListings);
+    stopBtn.addEventListener('click', stopScan);
+    downloadBtn.addEventListener('click', downloadCSV);
+    clearBtn.addEventListener('click', clearAll);
+
+    // Preview header when type changes (before scanning)
+    typeInput.addEventListener('change', () => {
+        if (isScanning) return;
+        currentType = typeInput.value;
+        renderHeader(currentType);
+    });
+
+    // Init header preview
+    renderHeader(typeInput.value);
+</script>
+</body>
+</html>

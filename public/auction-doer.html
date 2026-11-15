@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auction Doer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { color: #2c3e50; margin-bottom: 20px; }
+        h2 { color: #2c3e50; margin-bottom: 15px; font-size: 20px; }
+
+        .config-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        textarea { height: 120px; font-family: monospace; }
+        .dual-panel { display: flex; gap: 20px; margin-top: 10px; }
+        .panel { flex: 1; }
+        .textarea-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .count-badge {
+            background-color: #3498db;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: normal;
+        }
+        .button-group { display: flex; gap: 10px; margin: 20px 0; }
+        button {
+            padding: 12px 24px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        .button-stop { background-color: #e74c3c; }
+        .button-stop:hover { background-color: #c0392b; }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .stat-item { text-align: center; flex: 1; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #3498db; }
+        .stat-label { font-size: 14px; color: #7f8c8d; }
+
+        .log-container {
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .log-success { color: #27ae60; }
+        .log-error   { color: #e74c3c; }
+        .log-info    { color: #3498db; }
+        .log-warning { color: #f39c12; }
+
+        .progress-container {
+            width: 100%;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 20px;
+            background-color: #2ecc71;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .notification {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        .notification-success { background-color: #d5f4e6; color: #27ae60; border: 1px solid #a3e4c3; }
+        .notification-error   { background-color: #fadbd8; color: #e74c3c; border: 1px solid #f5b7b1; }
+
+        .tab-buttons { display: flex; margin-bottom: 10px; }
+        .tab-button {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab-button.active { background: white; border-bottom: none; font-weight: bold; }
+        .tab { display: none; }
+        .tab.active { display: block; }
+
+        .small-note { font-size: 12px; color: #7f8c8d; margin-top: 5px; }
+
+        .time-preview {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+            font-family: monospace;
+            font-size: 13px;
+            margin-top: 10px;
+            line-height: 1.7;
+        }
+
+        .auction-id-list {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px dashed #27ae60;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .radio-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-right: 20px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        .radio-inline input { width: auto; margin: 0; }
+
+        .narrow { max-width: 350px; }
+    </style>
+</head>
+<body>
+    <h1>🔨 Auction Doer</h1>
+
+    <!-- ============ 1. Credentials & Input ============ -->
+    <div class="config-section">
+        <h2>Credentials &amp; Input</h2>
+
+        <label for="jwtTokens">JWT Token(s) (one per line):</label>
+        <textarea id="jwtTokens" placeholder="One JWT per line.
+- 1 token  → used for ALL entity IDs
+- N tokens → must match N entity IDs (paired in order)"></textarea>
+        <div class="small-note">
+            💡 For mixed counts across accounts, run the tool once per account.
+        </div>
+
+        <label for="DELAY_BETWEEN_REQUESTS">Delay between requests (ms):</label>
+        <input type="number" id="DELAY_BETWEEN_REQUESTS" value="1700" class="narrow" />
+
+        <label>Input Method:</label>
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="switchTab('paste')">Paste Data</button>
+            <button class="tab-button" onclick="switchTab('file')">Upload File</button>
+        </div>
+
+        <div id="paste-tab" class="tab active">
+            <div class="textarea-label">
+                <label for="entityIdsTextarea">Entity IDs (one per line):</label>
+                <span id="entityIdsCount" class="count-badge">0 IDs</span>
+            </div>
+            <textarea id="entityIdsTextarea" placeholder="Enter entity/card IDs here, one per line.
+Example:
+470813994
+470813995
+..."></textarea>
+        </div>
+
+        <div id="file-tab" class="tab">
+            <label for="entityIdsFile">Upload Entity IDs File:</label>
+            <input type="file" id="entityIdsFile" accept=".txt,.csv" />
+            <div class="small-note">Text file with one entity ID per line</div>
+        </div>
+    </div>
+
+    <!-- ============ 2. Auction Settings ============ -->
+    <div class="config-section">
+        <h2>Auction Settings (same for all)</h2>
+
+        <div class="dual-panel">
+            <div class="panel">
+                <label for="minimumBid">Minimum Bid:</label>
+                <input type="text" id="minimumBid" value="0.25" placeholder="0.25" />
+            </div>
+            <div class="panel">
+                <label for="bidIncrement">Bid Increment:</label>
+                <input type="text" id="bidIncrement" value="0.10" placeholder="0.10" />
+            </div>
+        </div>
+
+        <label>Start Time:</label>
+        <div style="margin-bottom: 10px;">
+            <label class="radio-inline">
+                <input type="radio" name="startTimeMode" value="now" checked /> Now (captured at click)
+            </label>
+            <label class="radio-inline">
+                <input type="radio" name="startTimeMode" value="delayed" /> Delayed
+            </label>
+        </div>
+        <input type="datetime-local" id="startTimePicker" class="narrow" style="display:none;" />
+
+        <label for="durationHours">Duration (hours from start):</label>
+        <input type="number" id="durationHours" value="24" min="0.01" step="0.01" class="narrow" />
+        <div class="small-note">Default 24h. Fractional OK (0.5 = 30 min). No hard cap.</div>
+
+        <div id="timePreview" class="time-preview"></div>
+
+        <div class="small-note" style="margin-top: 10px;">
+            🔒 Fixed: <code>antiSnipeSeconds: 120</code> · <code>entityType: "card"</code>
+        </div>
+    </div>
+
+    <!-- ============ 3. Stats ============ -->
+    <div class="stats">
+        <div class="stat-item">
+            <div class="stat-value" id="totalEntities">0</div>
+            <div class="stat-label">Total Auctions</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="processedEntities">0</div>
+            <div class="stat-label">Processed</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="successfulAuctions">0</div>
+            <div class="stat-label">Successful</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="failedAuctions">0</div>
+            <div class="stat-label">Failed</div>
+        </div>
+    </div>
+
+    <div class="progress-container" style="display: none;" id="progressContainer">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="button-group">
+        <button id="startButton">Start Creating Auctions</button>
+        <button id="pauseButton" style="display: none;">Pause</button>
+        <button id="resumeButton" style="display: none;">Resume</button>
+        <button id="downloadButton">Download Results</button>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <div class="log-container" id="logContainer">
+        <div class="log-entry log-info">Ready. Configure settings and click Start.</div>
+    </div>
+
+    <!-- ============ 4. Auction IDs ============ -->
+    <div class="config-section" id="auctionIdsContainer" style="display: none;">
+        <h2>Created Auctions</h2>
+        <div class="stats" style="margin-top: 0;">
+            <div class="stat-item">
+                <div class="stat-value" id="totalAuctionIds">0</div>
+                <div class="stat-label">Total Auctions Created</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h3>Auction IDs (one per line):</h3>
+            <div class="auction-id-list" id="auctionIdList">No auctions created yet</div>
+        </div>
+    </div>
+
+<script src="/nav-loader.js"></script>
+<script>
+    // ============ Constants ============
+    const API_ENDPOINT = '/auctions';
+    const ANTI_SNIPE_SECONDS = 120;
+    const ENTITY_TYPE = 'card';
+
+    // ============ State ============
+    let DELAY_BETWEEN_REQUESTS = 1700;
+    let isProcessing = false;
+    let isPaused = false;
+    let entityIds = [];
+    let jwtTokens = [];
+    let currentIndex = 0;
+    let totalEntities = 0;
+    let processedEntities = 0;
+    let successfulAuctions = 0;
+    let failedAuctions = 0;
+    let auctionIds = [];
+    let results = [];
+
+    // ============ DOM ============
+    const $ = id => document.getElementById(id);
+    const startButton = $('startButton');
+    const pauseButton = $('pauseButton');
+    const resumeButton = $('resumeButton');
+    const downloadButton = $('downloadButton');
+    const progressContainer = $('progressContainer');
+    const progressBar = $('progressBar');
+    const logContainer = $('logContainer');
+    const notification = $('notification');
+    const auctionIdsContainer = $('auctionIdsContainer');
+    const auctionIdList = $('auctionIdList');
+    const totalAuctionIds = $('totalAuctionIds');
+
+    // ============ Helpers ============
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+    function getCurrentDelay() {
+        const v = parseInt($('DELAY_BETWEEN_REQUESTS').value, 10);
+        return isNaN(v) ? 1700 : v;
+    }
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function toDatetimeLocalValue(date) {
+        return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}`
+             + `T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+    }
+
+    async function sendProxyRequest(endpoint, method = 'GET', headers = {}, data = null) {
+        const response = await fetch('/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint, method, headers, data }),
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        return await response.json();
+    }
+
+    // ============ Init ============
+    document.addEventListener('DOMContentLoaded', function() {
+        DELAY_BETWEEN_REQUESTS = getCurrentDelay();
+
+        $('DELAY_BETWEEN_REQUESTS').addEventListener('change', function() {
+            if (!isProcessing) DELAY_BETWEEN_REQUESTS = getCurrentDelay();
+        });
+
+        startButton.addEventListener('click', startProcessing);
+        pauseButton.addEventListener('click', pauseProcessing);
+        resumeButton.addEventListener('click', resumeProcessing);
+        downloadButton.addEventListener('click', downloadResults);
+
+        $('jwtTokens').addEventListener('input', updateStats);
+        $('entityIdsTextarea').addEventListener('input', updateStats);
+        $('entityIdsFile').addEventListener('change', handleFileUpload);
+
+        // Start-time mode toggle
+        document.querySelectorAll('input[name="startTimeMode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const picker = $('startTimePicker');
+                if (this.value === 'delayed') {
+                    picker.style.display = 'inline-block';
+                    // Pre-fill with "now + 5 minutes" if empty
+                    if (!picker.value) {
+                        picker.value = toDatetimeLocalValue(new Date(Date.now() + 5 * 60 * 1000));
+                    }
+                } else {
+                    picker.style.display = 'none';
+                }
+                updateTimePreview();
+            });
+        });
+
+        $('startTimePicker').addEventListener('change', updateTimePreview);
+        $('durationHours').addEventListener('input', updateTimePreview);
+        $('minimumBid').addEventListener('input', updateTimePreview);
+        $('bidIncrement').addEventListener('input', updateTimePreview);
+
+        updateStats();
+        updateTimePreview();
+    });
+
+    // ============ Tab switching ============
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.tab-button[onclick="switchTab('${tabName}')"]`).classList.add('active');
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        $(tabName + '-tab').classList.add('active');
+        updateStats();
+    }
+
+    // ============ File upload ============
+    async function handleFileUpload() {
+        const file = $('entityIdsFile').files[0];
+        if (!file) return;
+        try {
+            const text = await readFileAsText(file);
+            $('entityIdsTextarea').value = text;
+            updateStats();
+            showNotification('Entity IDs file loaded!', 'success');
+        } catch (error) {
+            showNotification(`Error reading file: ${error.message}`, 'error');
+        }
+    }
+    function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = e => resolve(e.target.result);
+            r.onerror = e => reject(e);
+            r.readAsText(file);
+        });
+    }
+
+    // ============ Stats & preview ============
+    function updateStats() {
+        const jwtText = $('jwtTokens').value.trim();
+        jwtTokens = jwtText ? jwtText.split('\n').map(s => s.trim()).filter(Boolean) : [];
+
+        const entityText = $('entityIdsTextarea').value.trim();
+        entityIds = entityText
+            ? entityText.split('\n').map(s => s.trim()).filter(s => s && !isNaN(parseInt(s, 10)))
+            : [];
+
+        totalEntities = entityIds.length;
+
+        $('totalEntities').textContent = totalEntities;
+        $('processedEntities').textContent = processedEntities;
+        $('successfulAuctions').textContent = successfulAuctions;
+        $('failedAuctions').textContent = failedAuctions;
+        $('entityIdsCount').textContent = `${entityIds.length} IDs`;
+    }
+
+    function updateTimePreview() {
+        const preview = $('timePreview');
+        const mode = document.querySelector('input[name="startTimeMode"]:checked').value;
+        const durationHours = parseFloat($('durationHours').value);
+        const minBid = $('minimumBid').value.trim() || '(empty)';
+        const increment = $('bidIncrement').value.trim() || '(empty)';
+
+        if (isNaN(durationHours) || durationHours <= 0) {
+            preview.innerHTML = '⚠️ Invalid duration. Enter a positive number of hours.';
+            return;
+        }
+
+        let timesLine;
+        if (mode === 'now') {
+            const now = new Date();
+            const end = new Date(now.getTime() + durationHours * 3600 * 1000);
+            timesLine =
+                `<strong>Start:</strong> NOW — captured when you click Start<br>` +
+                `<strong>End:</strong> ≈ ${end.toLocaleString()} ` +
+                `<span style="color:#999">(recalculated at click)</span>`;
+        } else {
+            const val = $('startTimePicker').value;
+            if (!val) {
+                preview.innerHTML = '⚠️ Please select a start time.';
+                return;
+            }
+            const start = new Date(val);
+            if (isNaN(start.getTime())) {
+                preview.innerHTML = '⚠️ Invalid start time.';
+                return;
+            }
+            const end = new Date(start.getTime() + durationHours * 3600 * 1000);
+            timesLine =
+                `<strong>Start:</strong> ${start.toLocaleString()} ` +
+                `<span style="color:#999">(${start.toISOString()})</span><br>` +
+                `<strong>End:</strong> ${end.toLocaleString()} ` +
+                `<span style="color:#999">(${end.toISOString()})</span>`;
+        }
+
+        preview.innerHTML = timesLine +
+            `<br><strong>Min bid:</strong> ${minBid} · <strong>Increment:</strong> ${increment}`;
+    }
+
+    // ============ Start-time resolution ============
+    function getStartTime() {
+        const mode = document.querySelector('input[name="startTimeMode"]:checked').value;
+        if (mode === 'now') return new Date();  // captured ONCE at click
+        const val = $('startTimePicker').value;
+        if (!val) return null;
+        const d = new Date(val);                // parsed as LOCAL time
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    // ============ Start / Stop / Pause ============
+    async function startProcessing() {
+        if (isProcessing) { stopProcessing(); return; }
+
+        if (jwtTokens.length === 0) {
+            showNotification('Please enter at least one JWT token', 'error'); return;
+        }
+        if (totalEntities === 0) {
+            showNotification('No entity IDs found.', 'error'); return;
+        }
+        if (jwtTokens.length > 1 && jwtTokens.length !== entityIds.length) {
+            showNotification(
+                `Multi-JWT requires matching counts. You have ${jwtTokens.length} JWT(s) ` +
+                `and ${entityIds.length} entity ID(s). For mixed counts, run the tool per account.`,
+                'error'
+            );
+            return;
+        }
+
+        const minimumBid = $('minimumBid').value.trim();
+        const bidIncrement = $('bidIncrement').value.trim();
+        const durationHours = parseFloat($('durationHours').value);
+
+        if (!minimumBid)  { showNotification('Please enter minimum bid', 'error'); return; }
+        if (!bidIncrement) { showNotification('Please enter bid increment', 'error'); return; }
+        if (isNaN(durationHours) || durationHours <= 0) {
+            showNotification('Please enter a valid duration in hours', 'error'); return;
+        }
+
+        const startTime = getStartTime();
+        if (!startTime) {
+            showNotification('Invalid start time. Configure the delayed start or pick "Now".', 'error'); return;
+        }
+        const endTime = new Date(startTime.getTime() + durationHours * 3600 * 1000);
+        const startsIso = startTime.toISOString();
+        const endsIso   = endTime.toISOString();
+
+        DELAY_BETWEEN_REQUESTS = getCurrentDelay();
+
+        // Reset
+        isProcessing = true;
+        isPaused = false;
+        currentIndex = 0;
+        results = [];
+        auctionIds = [];
+        processedEntities = 0;
+        successfulAuctions = 0;
+        failedAuctions = 0;
+        updateStats();
+
+        // UI
+        startButton.textContent = 'Stop Processing';
+        startButton.classList.add('button-stop');
+        pauseButton.style.display = 'inline-block';
+        resumeButton.style.display = 'none';
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        auctionIdsContainer.style.display = 'none';
+
+        logContainer.innerHTML = '';
+        addLog('Starting auction creation...', 'info');
+        addLog(`Total entities: ${totalEntities} · JWTs: ${jwtTokens.length}`, 'info');
+        addLog(`Starts: ${startsIso}`, 'info');
+        addLog(`Ends:   ${endsIso}`, 'info');
+        addLog(`Duration: ${durationHours}h · Min Bid: ${minimumBid} · Increment: ${bidIncrement}`, 'info');
+        addLog(`Delay between requests: ${DELAY_BETWEEN_REQUESTS}ms`, 'info');
+
+        await processAuctions(startsIso, endsIso, minimumBid, bidIncrement);
+    }
+
+    function stopProcessing() {
+        isProcessing = false;
+        startButton.textContent = 'Start Creating Auctions';
+        startButton.classList.remove('button-stop');
+        pauseButton.style.display = 'none';
+        resumeButton.style.display = 'none';
+        addLog('Processing stopped by user', 'info');
+    }
+
+    function pauseProcessing() {
+        isPaused = true;
+        pauseButton.style.display = 'none';
+        resumeButton.style.display = 'inline-block';
+        addLog('Paused', 'info');
+    }
+
+    function resumeProcessing() {
+        isPaused = false;
+        resumeButton.style.display = 'none';
+        pauseButton.style.display = 'inline-block';
+        addLog('Resumed', 'info');
+    }
+
+    // ============ Main loop ============
+    async function processAuctions(startsIso, endsIso, minimumBid, bidIncrement) {
+        // Snapshot inputs so edits during processing don't disturb the loop
+        const entities = [...entityIds];
+        const tokens = [...jwtTokens];
+        const total = entities.length;
+
+        for (let i = currentIndex; i < total && isProcessing; i++) {
+            while (isPaused && isProcessing) { await sleep(1000); }
+            if (!isProcessing) break;
+
+            currentIndex = i;
+            const entityId = entities[i];
+            const jwt = tokens.length === 1 ? tokens[0] : tokens[i];
+
+            addLog(`Auction ${i + 1}/${total} (entity ${entityId})...`, 'info');
+
+            try {
+                const success = await createAuction(entityId, jwt, startsIso, endsIso, minimumBid, bidIncrement);
+                if (success) {
+                    successfulAuctions++;
+                    addLog(`✓ Entity ${entityId} auction created`, 'success');
+                } else {
+                    failedAuctions++;
+                    addLog(`✗ Entity ${entityId} auction failed`, 'error');
+                }
+                processedEntities++;
+                results.push({ entityId, success, timestamp: new Date().toISOString() });
+            } catch (error) {
+                failedAuctions++;
+                processedEntities++;
+                addLog(`✗ Error for entity ${entityId}: ${error.message}`, 'error');
+                results.push({ entityId, success: false, error: error.message, timestamp: new Date().toISOString() });
+            }
+
+            $('processedEntities').textContent = processedEntities;
+            $('successfulAuctions').textContent = successfulAuctions;
+            $('failedAuctions').textContent = failedAuctions;
+            progressBar.style.width = `${((i + 1) / total) * 100}%`;
+
+            if (i < total - 1 && isProcessing) {
+                await sleep(DELAY_BETWEEN_REQUESTS);
+            }
+        }
+
+        if (isProcessing) {
+            isProcessing = false;
+            startButton.textContent = 'Start Creating Auctions';
+            startButton.classList.remove('button-stop');
+            pauseButton.style.display = 'none';
+            resumeButton.style.display = 'none';
+
+            displayAuctionIds();
+            addLog(`Done. ${successfulAuctions} successful, ${failedAuctions} failed.`, 'info');
+            showNotification(
+                `Auction creation complete! ${successfulAuctions} successful, ${failedAuctions} failed.`,
+                'success'
+            );
+        }
+    }
+
+    // ============ Single POST ============
+    async function createAuction(entityId, jwt, startsIso, endsIso, minimumBid, bidIncrement) {
+        const headers = {
+            'Content-Type': 'application/json',
+            'x-user-jwt': jwt,
+        };
+        const data = {
+            entityId: parseInt(entityId, 10),
+            entityType: ENTITY_TYPE,
+            minimumBid: minimumBid,
+            bidIncrement: bidIncrement,
+            antiSnipeSeconds: ANTI_SNIPE_SECONDS,
+            starts: startsIso,
+            ends: endsIso,
+        };
+
+        const response = await sendProxyRequest(API_ENDPOINT, 'POST', headers, data);
+
+        // Explicit failure check
+        if (response?.success === false || response?.data?.success === false) {
+            const err =
+                response?.error ||
+                response?.details?.message ||
+                response?.data?.error ||
+                'API returned success=false';
+            throw new Error(err);
+        }
+
+        // Defensive auction-id extraction across common shapes
+        const candidates = [
+            response,
+            response?.data,
+            response?.data?.auction,
+            response?.data?.data,
+        ];
+        let auctionId = null;
+        for (const c of candidates) {
+            if (c && typeof c === 'object') {
+                if (c.id != null) { auctionId = c.id; break; }
+                if (c.auctionId != null) { auctionId = c.auctionId; break; }
+            }
+        }
+
+        if (!auctionId) {
+            // No recognizable id, but no explicit failure either
+            if (response?.error) throw new Error(response.error);
+            auctionIds.push({ entityId, auctionId: '(unknown)', starts: startsIso, ends: endsIso });
+            addLog(`  ├─ Auction created (ID not returned in response)`, 'warning');
+            return true;
+        }
+
+        auctionIds.push({ entityId, auctionId, starts: startsIso, ends: endsIso });
+        addLog(`  ├─ Auction ID: ${auctionId}`, 'success');
+        return true;
+    }
+
+    // ============ Results display ============
+    function displayAuctionIds() {
+        if (auctionIds.length === 0) {
+            auctionIdsContainer.style.display = 'none';
+            return;
+        }
+        auctionIdsContainer.style.display = 'block';
+        totalAuctionIds.textContent = auctionIds.length;
+
+        let idText = '';
+        auctionIds.forEach(item => { idText += `${item.auctionId}\n`; });
+
+        let detailed = '<div style="margin-bottom: 15px;">';
+        detailed += '<table style="width: 100%; border-collapse: collapse;">';
+        detailed += '<thead><tr style="background-color: #f2f2f2;">';
+        detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">#</th>';
+        detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Entity ID</th>';
+        detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Auction ID</th>';
+        detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Starts</th>';
+        detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Ends</th>';
+        detailed += '</tr></thead><tbody>';
+        auctionIds.forEach((item, idx) => {
+            detailed += `<tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 8px;">${idx + 1}</td>
+                <td style="padding: 8px; font-family: monospace;">${item.entityId}</td>
+                <td style="padding: 8px; font-family: monospace; color: #27ae60; font-weight: bold;">${item.auctionId}</td>
+                <td style="padding: 8px; font-family: monospace; font-size: 11px;">${item.starts}</td>
+                <td style="padding: 8px; font-family: monospace; font-size: 11px;">${item.ends}</td>
+            </tr>`;
+        });
+        detailed += '</tbody></table></div>';
+
+        auctionIdList.innerHTML =
+            `<div style="margin-bottom: 10px;"><strong>Simple list (one per line):</strong></div>` +
+            `<pre style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #ddd; overflow-x: auto;">${idText}</pre>` +
+            `<div style="margin-top: 20px;"><strong>Detailed view:</strong></div>${detailed}`;
+
+        addLog(`✅ ${auctionIds.length} auction IDs collected`, 'success');
+    }
+
+    // ============ Logging / notifications ============
+    function addLog(message, type = 'info') {
+        const entry = document.createElement('div');
+        entry.className = `log-entry log-${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logContainer.appendChild(entry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function showNotification(message, type = 'info') {
+        notification.textContent = message;
+        notification.className = `notification notification-${type}`;
+        notification.style.display = 'block';
+        setTimeout(() => { notification.style.display = 'none'; }, 6000);
+    }
+
+    // ============ Download ============
+    function downloadResults() {
+        if (results.length === 0) {
+            showNotification('No results to download', 'error'); return;
+        }
+
+        const durationHours = parseFloat($('durationHours').value) || 0;
+        let text = 'Auction Creation Results\n';
+        text += '========================\n\n';
+        text += `Total Entities: ${totalEntities}\n`;
+        text += `Successful: ${successfulAuctions}\n`;
+        text += `Failed: ${failedAuctions}\n`;
+        text += `Processed: ${processedEntities}\n`;
+        text += `Duration (hours): ${durationHours}\n`;
+        text += `Minimum Bid: ${$('minimumBid').value.trim()}\n`;
+        text += `Bid Increment: ${$('bidIncrement').value.trim()}\n\n`;
+
+        if (auctionIds.length > 0) {
+            text += 'Auction IDs:\n------------\n';
+            auctionIds.forEach((item, idx) => {
+                text += `${idx + 1}. Entity: ${item.entityId} → Auction ID: ${item.auctionId}\n`;
+                text += `   Starts: ${item.starts}\n`;
+                text += `   Ends:   ${item.ends}\n`;
+            });
+            text += '\n';
+        }
+
+        text += 'Detailed Results:\n-----------------\n';
+        results.forEach((r, idx) => {
+            text += `${idx + 1}. Entity ID: ${r.entityId}\n`;
+            text += `   Status: ${r.success ? 'SUCCESS' : 'FAILED'}\n`;
+            if (r.success) {
+                const a = auctionIds.find(x => x.entityId === r.entityId);
+                if (a) text += `   Auction ID: ${a.auctionId}\n`;
+            }
+            if (r.error) text += `   Error: ${r.error}\n`;
+            text += `   Timestamp: ${r.timestamp}\n\n`;
+        });
+
+        const now = new Date();
+        const stamp = `${now.getFullYear()}.${pad2(now.getMonth()+1)}.${pad2(now.getDate())}_${pad2(now.getHours())}h${pad2(now.getMinutes())}`;
+
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `auction_results_${stamp}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showNotification('Results downloaded!', 'success');
+    }
+</script>
+</body>
+</html>
