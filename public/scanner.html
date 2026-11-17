@@ -15,26 +15,14 @@
             color: #1e293b;
         }
         .nav-bar {
-            background: white;
-            padding: 12px 24px;
-            border-radius: 16px;
-            margin-bottom: 24px;
+            background: white; padding: 12px 24px; border-radius: 16px; margin-bottom: 24px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
         }
         .nav-links { display: flex; gap: 12px; flex-wrap: wrap; }
         .nav-link {
-            padding: 6px 18px;
-            border-radius: 40px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            background: #f1f5f9;
-            color: #1e293b;
-            transition: 0.2s;
+            padding: 6px 18px; border-radius: 40px; text-decoration: none;
+            font-weight: 600; font-size: 0.9rem; background: #f1f5f9; color: #1e293b; transition: 0.2s;
         }
         .nav-link.active { background: #2563eb; color: white; }
         .nav-link:hover:not(.active) { background: #e2e8f0; }
@@ -246,7 +234,9 @@
             <thead><tr>
                 <th>Sender</th><th>ID</th><th>Batch</th><th>Mint</th><th>Type</th><th>Coll ID</th>
                 <th>Title</th><th>Templ ID</th><th>Lowest price</th><th>Circ</th><th>Minted</th>
-                <th>Full title</th><th>Rarity</th><th>Market ID</th><th>Status</th><th>ETH</th>
+                <th>Full title</th><th>Rarity</th>
+                <th>Treatment Tier</th><th>Min Card Rating</th><th>Max Card Rating</th>
+                <th>Market ID</th><th>Status</th><th>ETH</th>
                 <th>Listed</th><th>Acquired</th><th>Rating</th>
             </tr></thead>
             <tbody id="tableBody"></tbody>
@@ -260,22 +250,27 @@
     const BATCH_SIZE = 4;
     const REQUEST_DELAY = 3000;
 
-    // NOTE: DEFAULT_EXCLUDED was removed — it contained founders/base collection IDs
-    // and was silently skipping Founders season. Use "Excluded collections" field if needed.
-
     let stopFlag = false;
-    let isProcessing = false;    // ← dedicated guard (does NOT touch stopFlag)
+    let isProcessing = false;
     let accountItems = {};
     let accountPairs = [];
     let currentAccountIdx = 0;
     let tradeCounter = 0;
     let marketCache = {};
 
-    // DOM refs
     const $ = id => document.getElementById(id);
     const startBtn = $('startButton'), stopBtn = $('stopButton'), tradeBtn = $('tradeButton'), downBtn = $('downloadButton');
     const statusEl = $('statusMessage'), progressBar = $('progressBar');
     const tableBody = $('tableBody');
+
+    // ---------- FIX #1: season encoding ----------
+    // Founders+Edition must go through the URL literally as "Founders+Edition".
+    // encodeURIComponent would turn "+" into "%2B", which the API rejects.
+    function encodeSeason(season) {
+        if (!season) return '';
+        if (season === 'Founders+Edition') return 'Founders+Edition';
+        return encodeURIComponent(season);
+    }
 
     // ----- UI helpers -----
     function updateStatus(msg, color='#1e293b') {
@@ -294,6 +289,7 @@
         if (!Array.isArray(items) || items.length === 0) return;
         const fields = ['senderID','id','mintBatch','mintNumber','type','collectionId','templateTitle',
             'templateId','lowestPrice','inCirculation','minted','fullTemplateTitle','rarity',
+            'treatmentTier','treatmentMinCardRating','treatmentMaxCardRating',
             'marketTemplateId','status','ethStatus','isMarketList','acquired','rating'];
         for (const item of items) {
             if (!item) continue;
@@ -373,7 +369,7 @@
         return res.json();
     }
 
-    // ----- FETCH COLLECTIONS -----
+    // ----- FETCH COLLECTIONS (with FIX #1 season encoding) -----
     async function getCollections(authToken, senderID, included, extraExcluded, gameType, seasons) {
         const headers = { 'Content-Type': 'application/json', 'x-user-jwt': authToken };
         const result = [];
@@ -383,7 +379,7 @@
         for (const season of seasonArray) {
             if (stopFlag) break;
             let url = `/collections/users/${senderID}/user-summary?categoryId=${gameType}`;
-            if (season) url += `&seasons=${encodeURIComponent(season)}`;
+            if (season) url += `&seasons=${encodeSeason(season)}`;
             try {
                 const resp = await proxyRequest(url, 'GET', headers);
                 if (resp && Array.isArray(resp.data)) {
@@ -406,7 +402,7 @@
         return result;
     }
 
-    // ----- FETCH MARKET DATA -----
+    // ----- FETCH MARKET DATA (with FIX #3 treatment fields) -----
     async function fetchMarketPrices(authToken, collectionId, collType, categoryId) {
         const cacheKey = `${collectionId}_${collType}`;
         if (marketCache[cacheKey]) return marketCache[cacheKey];
@@ -423,13 +419,18 @@
                 for (const t of templates) {
                     const templateData = t.cardTemplate || t.stickerTemplate;
                     if (!templateData || !templateData.id) continue;
+                    const treatment = templateData.treatment || null;
                     prices[templateData.id] = {
                         price: t.lowestPrice || '0.00',
                         entityTemplateId: t.entityTemplateId,
                         inCirculation: templateData.inCirculation ?? '',
                         minted: templateData.minted ?? '',
                         templateTitle: templateData.title || '',
-                        rarity: templateData.rarity || ''
+                        rarity: templateData.rarity || '',
+                        // FIX #3: treatment sub-object
+                        treatmentTier: treatment?.tier ?? '',
+                        treatmentMinCardRating: treatment?.minCardRating ?? '',
+                        treatmentMaxCardRating: treatment?.maxCardRating ?? ''
                     };
                 }
                 if (templates.length < 40) break;
@@ -448,13 +449,26 @@
             ? `/collections/${collectionId}/sticker-templates`
             : `/collections/${collectionId}/card-templates`;
 
-        // Templates — safe: empty map on any error
+        // Fetch card-templates and enrich with everything the endpoint returns
+        // (needed for FIX #2: fallback entries for unlisted templates)
         let templateMap = {};
         try {
             const tresp = await proxyRequest(templatesUrl, 'GET', headers);
             if (tresp && Array.isArray(tresp.data)) {
                 tresp.data.forEach(t => {
-                    if (t && t.id != null) templateMap[t.id] = { title: t.title, id: t.id };
+                    if (t && t.id != null) {
+                        const treatment = t.treatment || null;
+                        templateMap[t.id] = {
+                            title: t.title,
+                            id: t.id,
+                            rarity: t.rarity || '',
+                            inCirculation: t.inCirculation ?? '',
+                            minted: t.minted ?? '',
+                            treatmentTier: treatment?.tier ?? '',
+                            treatmentMinCardRating: treatment?.minCardRating ?? '',
+                            treatmentMaxCardRating: treatment?.maxCardRating ?? ''
+                        };
+                    }
                 });
             }
         } catch (e) { console.warn('template fetch failed', collectionId, e); }
@@ -462,6 +476,32 @@
         await fetchMarketPrices(authToken, collectionId, collType, categoryId);
         const cacheKey = `${collectionId}_${collType}`;
         const marketData = marketCache[cacheKey] || {};
+
+        // ---------- FIX #2: include every template we have cards for ----------
+        // The /market/templates endpoint only returns templates with active listings.
+        // For templates with no listings (lowestPrice = 0 / null), there would be no
+        // entry → circulation/rarity/treatment would be empty. Fill those in from
+        // the card-templates endpoint so every owned card gets enrichment.
+        let filledFromTemplates = 0;
+        for (const tid of Object.keys(templateMap)) {
+            if (!marketData[tid]) {
+                const tInfo = templateMap[tid];
+                marketData[tid] = {
+                    price: '0.00',
+                    inCirculation: tInfo.inCirculation,
+                    minted: tInfo.minted,
+                    templateTitle: tInfo.title,
+                    rarity: tInfo.rarity,
+                    treatmentTier: tInfo.treatmentTier,
+                    treatmentMinCardRating: tInfo.treatmentMinCardRating,
+                    treatmentMaxCardRating: tInfo.treatmentMaxCardRating
+                };
+                filledFromTemplates++;
+            }
+        }
+        if (filledFromTemplates > 0) {
+            console.log(`[market] collection ${collectionId}: filled ${filledFromTemplates} template(s) from card-templates (no active listings)`);
+        }
 
         const resp = await proxyRequest(itemsUrl, 'GET', headers);
         const items = collType === 'sticker'
@@ -477,8 +517,6 @@
             seen.add(key);
 
             const templateId = collType === 'sticker' ? item.stickerTemplateId : item.cardTemplateId;
-
-            // FIX: fall back to placeholder if template is missing (was throwing TypeError)
             const tInfo = (templateId != null && templateMap[templateId]) || { title: 'Unknown', id: 'N/A' };
             const mInfo = (templateId != null && marketData[templateId]) ? marketData[templateId] : null;
 
@@ -501,7 +539,10 @@
                 inCirculation: mInfo ? mInfo.inCirculation : '',
                 minted: mInfo ? mInfo.minted : '',
                 fullTemplateTitle: mInfo ? mInfo.templateTitle : '',
-                rarity: mInfo ? mInfo.rarity : ''
+                rarity: mInfo ? mInfo.rarity : '',
+                treatmentTier: mInfo ? mInfo.treatmentTier : '',
+                treatmentMinCardRating: mInfo ? mInfo.treatmentMinCardRating : '',
+                treatmentMaxCardRating: mInfo ? mInfo.treatmentMaxCardRating : ''
             });
         }
         return out;
@@ -536,16 +577,15 @@
                 addItemsToTable(filtered);
             } catch (e) {
                 console.warn(`collection ${coll.id} failed for ${senderID}:`, e);
-                // continue with next collection — do NOT abort whole scan
             }
         }
     }
 
     // ----- MAIN SCAN -----
     async function fetchCollectionItems() {
-        if (isProcessing) return;         // ← real guard, not stopFlag
+        if (isProcessing) return;
         isProcessing = true;
-        stopFlag = false;                 // ← always reset on fresh start
+        stopFlag = false;
 
         stopBtn.disabled = false;
         startBtn.disabled = true;
@@ -713,13 +753,14 @@
         }
     }
 
-    // ----- CSV -----
+    // ----- CSV (with treatment columns) -----
     function downloadData() {
         let flat = [];
         for (const s in accountItems) flat.push(...accountItems[s].filteredItems);
         if (!flat.length) { updateStatus('No data to export', 'red'); return; }
         const headers = ['senderID','id','mintBatch','mintNumber','type','collectionId','templateTitle',
             'templateId','lowestPrice','inCirculation','minted','fullTemplateTitle','rarity',
+            'treatmentTier','treatmentMinCardRating','treatmentMaxCardRating',
             'marketTemplateId','status','ethStatus','isMarketList','acquired','rating'];
         let csv = headers.join(',') + '\n';
         for (const row of flat) {
@@ -758,7 +799,6 @@
 
     document.querySelector('input[name="gameType"][value="1"]').dispatchEvent(new Event('change'));
 
-    // nav loader (if exists)
     fetch('/nav-loader.js').then(r => r.text()).then(script => {
         if (script && !script.includes('404')) {
             const s = document.createElement('script'); s.textContent = script; document.head.appendChild(s);

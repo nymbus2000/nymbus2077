@@ -138,6 +138,15 @@
 
         .small-note { font-size: 12px; color: #7f8c8d; margin-top: 5px; }
 
+        .match-status {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        .match-success { background-color: #d5f4e6; color: #27ae60; }
+        .match-warning { background-color: #fef9e7; color: #f39c12; }
+
         .time-preview {
             background: #f8f9fa;
             padding: 12px;
@@ -219,20 +228,42 @@ Example:
 
     <!-- ============ 2. Auction Settings ============ -->
     <div class="config-section">
-        <h2>Auction Settings (same for all)</h2>
+        <h2>Auction Settings</h2>
 
         <div class="dual-panel">
             <div class="panel">
-                <label for="minimumBid">Minimum Bid:</label>
-                <input type="text" id="minimumBid" value="0.25" placeholder="0.25" />
+                <div class="textarea-label">
+                    <label for="minimumBidsTextarea">Minimum Bids (one per line):</label>
+                    <span id="minimumBidsCount" class="count-badge">0 bids</span>
+                </div>
+                <textarea id="minimumBidsTextarea" placeholder="Enter minimum bids here, one per line.
+Each line matches the Entity ID at the same index.
+Example:
+0.25
+0.50
+1.00
+..."></textarea>
+                <div class="small-note">If fewer bids than entities, the last bid will repeat for remaining entities.</div>
             </div>
             <div class="panel">
-                <label for="bidIncrement">Bid Increment:</label>
-                <input type="text" id="bidIncrement" value="0.10" placeholder="0.10" />
+                <div class="textarea-label">
+                    <label for="bidIncrementsTextarea">Bid Increments (one per line):</label>
+                    <span id="bidIncrementsCount" class="count-badge">0 increments</span>
+                </div>
+                <textarea id="bidIncrementsTextarea" placeholder="Enter bid increments here, one per line.
+Each line matches the Entity ID at the same index.
+Example:
+0.10
+0.10
+0.25
+..."></textarea>
+                <div class="small-note">If fewer increments than entities, the last increment will repeat for remaining entities.</div>
             </div>
         </div>
 
-        <label>Start Time:</label>
+        <div id="matchStatus" class="match-status match-success" style="display: none;"></div>
+
+        <label style="margin-top: 20px;">Start Time:</label>
         <div style="margin-bottom: 10px;">
             <label class="radio-inline">
                 <input type="radio" name="startTimeMode" value="now" checked /> Now (captured at click)
@@ -320,6 +351,8 @@ Example:
     let isPaused = false;
     let entityIds = [];
     let jwtTokens = [];
+    let minimumBids = [];
+    let bidIncrements = [];
     let currentIndex = 0;
     let totalEntities = 0;
     let processedEntities = 0;
@@ -341,6 +374,7 @@ Example:
     const auctionIdsContainer = $('auctionIdsContainer');
     const auctionIdList = $('auctionIdList');
     const totalAuctionIds = $('totalAuctionIds');
+    const matchStatus = $('matchStatus');
 
     // ============ Helpers ============
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -352,6 +386,10 @@ Example:
     function toDatetimeLocalValue(date) {
         return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}`
              + `T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+    }
+    function parseLines(text) {
+        if (!text || !text.trim()) return [];
+        return text.split('\n').map(l => l.trim()).filter(l => l !== '');
     }
 
     async function sendProxyRequest(endpoint, method = 'GET', headers = {}, data = null) {
@@ -382,15 +420,15 @@ Example:
 
         $('jwtTokens').addEventListener('input', updateStats);
         $('entityIdsTextarea').addEventListener('input', updateStats);
+        $('minimumBidsTextarea').addEventListener('input', updateStats);
+        $('bidIncrementsTextarea').addEventListener('input', updateStats);
         $('entityIdsFile').addEventListener('change', handleFileUpload);
 
-        // Start-time mode toggle
         document.querySelectorAll('input[name="startTimeMode"]').forEach(radio => {
             radio.addEventListener('change', function() {
                 const picker = $('startTimePicker');
                 if (this.value === 'delayed') {
                     picker.style.display = 'inline-block';
-                    // Pre-fill with "now + 5 minutes" if empty
                     if (!picker.value) {
                         picker.value = toDatetimeLocalValue(new Date(Date.now() + 5 * 60 * 1000));
                     }
@@ -403,8 +441,6 @@ Example:
 
         $('startTimePicker').addEventListener('change', updateTimePreview);
         $('durationHours').addEventListener('input', updateTimePreview);
-        $('minimumBid').addEventListener('input', updateTimePreview);
-        $('bidIncrement').addEventListener('input', updateTimePreview);
 
         updateStats();
         updateTimePreview();
@@ -443,13 +479,10 @@ Example:
 
     // ============ Stats & preview ============
     function updateStats() {
-        const jwtText = $('jwtTokens').value.trim();
-        jwtTokens = jwtText ? jwtText.split('\n').map(s => s.trim()).filter(Boolean) : [];
-
-        const entityText = $('entityIdsTextarea').value.trim();
-        entityIds = entityText
-            ? entityText.split('\n').map(s => s.trim()).filter(s => s && !isNaN(parseInt(s, 10)))
-            : [];
+        jwtTokens = parseLines($('jwtTokens').value);
+        entityIds = parseLines($('entityIdsTextarea').value).filter(s => !isNaN(parseInt(s, 10)));
+        minimumBids = parseLines($('minimumBidsTextarea').value);
+        bidIncrements = parseLines($('bidIncrementsTextarea').value);
 
         totalEntities = entityIds.length;
 
@@ -458,14 +491,54 @@ Example:
         $('successfulAuctions').textContent = successfulAuctions;
         $('failedAuctions').textContent = failedAuctions;
         $('entityIdsCount').textContent = `${entityIds.length} IDs`;
+        $('minimumBidsCount').textContent = `${minimumBids.length} bids`;
+        $('bidIncrementsCount').textContent = `${bidIncrements.length} increments`;
+
+        updateMatchStatus();
+        updateTimePreview();
+    }
+
+    function updateMatchStatus() {
+        if (totalEntities === 0) {
+            matchStatus.style.display = 'none';
+            return;
+        }
+
+        const warnings = [];
+
+        if (minimumBids.length === 0) {
+            warnings.push('⚠️ No minimum bids provided. Please enter at least one bid.');
+        } else if (minimumBids.length < totalEntities) {
+            warnings.push(`⚠️ Only ${minimumBids.length} bid(s) for ${totalEntities} entity(s). Last bid "${minimumBids[minimumBids.length-1]}" will be repeated.`);
+        } else if (minimumBids.length > totalEntities) {
+            warnings.push(`⚠️ ${minimumBids.length} bids provided but only ${totalEntities} entity(s). Extra bids will be ignored.`);
+        }
+
+        if (bidIncrements.length === 0) {
+            warnings.push('⚠️ No bid increments provided. Please enter at least one increment.');
+        } else if (bidIncrements.length < totalEntities) {
+            warnings.push(`⚠️ Only ${bidIncrements.length} increment(s) for ${totalEntities} entity(s). Last increment "${bidIncrements[bidIncrements.length-1]}" will be repeated.`);
+        } else if (bidIncrements.length > totalEntities) {
+            warnings.push(`⚠️ ${bidIncrements.length} increments provided but only ${totalEntities} entity(s). Extra increments will be ignored.`);
+        }
+
+        if (warnings.length > 0) {
+            matchStatus.style.display = 'block';
+            matchStatus.className = 'match-status match-warning';
+            matchStatus.innerHTML = warnings.join('<br>');
+        } else {
+            matchStatus.style.display = 'block';
+            matchStatus.className = 'match-status match-success';
+            matchStatus.innerHTML = '✅ Perfect match! Bids, increments, and entities all align.';
+        }
     }
 
     function updateTimePreview() {
         const preview = $('timePreview');
+        if (!preview) return;
+
         const mode = document.querySelector('input[name="startTimeMode"]:checked').value;
         const durationHours = parseFloat($('durationHours').value);
-        const minBid = $('minimumBid').value.trim() || '(empty)';
-        const increment = $('bidIncrement').value.trim() || '(empty)';
 
         if (isNaN(durationHours) || durationHours <= 0) {
             preview.innerHTML = '⚠️ Invalid duration. Enter a positive number of hours.';
@@ -500,16 +573,29 @@ Example:
         }
 
         preview.innerHTML = timesLine +
-            `<br><strong>Min bid:</strong> ${minBid} · <strong>Increment:</strong> ${increment}`;
+            `<br><strong>Bids:</strong> ${minimumBids.length} provided · ` +
+            `<strong>Increments:</strong> ${bidIncrements.length} provided`;
+    }
+
+    // ============ Per-index repeat-last logic ============
+    function getBidForIndex(index) {
+        if (minimumBids.length === 0) return null;
+        if (index < minimumBids.length) return minimumBids[index];
+        return minimumBids[minimumBids.length - 1];
+    }
+    function getIncrementForIndex(index) {
+        if (bidIncrements.length === 0) return null;
+        if (index < bidIncrements.length) return bidIncrements[index];
+        return bidIncrements[bidIncrements.length - 1];
     }
 
     // ============ Start-time resolution ============
     function getStartTime() {
         const mode = document.querySelector('input[name="startTimeMode"]:checked').value;
-        if (mode === 'now') return new Date();  // captured ONCE at click
+        if (mode === 'now') return new Date();
         const val = $('startTimePicker').value;
         if (!val) return null;
-        const d = new Date(val);                // parsed as LOCAL time
+        const d = new Date(val);
         return isNaN(d.getTime()) ? null : d;
     }
 
@@ -523,6 +609,12 @@ Example:
         if (totalEntities === 0) {
             showNotification('No entity IDs found.', 'error'); return;
         }
+        if (minimumBids.length === 0) {
+            showNotification('Please enter at least one minimum bid', 'error'); return;
+        }
+        if (bidIncrements.length === 0) {
+            showNotification('Please enter at least one bid increment', 'error'); return;
+        }
         if (jwtTokens.length > 1 && jwtTokens.length !== entityIds.length) {
             showNotification(
                 `Multi-JWT requires matching counts. You have ${jwtTokens.length} JWT(s) ` +
@@ -532,12 +624,7 @@ Example:
             return;
         }
 
-        const minimumBid = $('minimumBid').value.trim();
-        const bidIncrement = $('bidIncrement').value.trim();
         const durationHours = parseFloat($('durationHours').value);
-
-        if (!minimumBid)  { showNotification('Please enter minimum bid', 'error'); return; }
-        if (!bidIncrement) { showNotification('Please enter bid increment', 'error'); return; }
         if (isNaN(durationHours) || durationHours <= 0) {
             showNotification('Please enter a valid duration in hours', 'error'); return;
         }
@@ -574,13 +661,20 @@ Example:
 
         logContainer.innerHTML = '';
         addLog('Starting auction creation...', 'info');
-        addLog(`Total entities: ${totalEntities} · JWTs: ${jwtTokens.length}`, 'info');
+        addLog(`Total entities: ${totalEntities} · JWTs: ${jwtTokens.length} · Bids: ${minimumBids.length} · Increments: ${bidIncrements.length}`, 'info');
         addLog(`Starts: ${startsIso}`, 'info');
         addLog(`Ends:   ${endsIso}`, 'info');
-        addLog(`Duration: ${durationHours}h · Min Bid: ${minimumBid} · Increment: ${bidIncrement}`, 'info');
+        addLog(`Duration: ${durationHours}h`, 'info');
         addLog(`Delay between requests: ${DELAY_BETWEEN_REQUESTS}ms`, 'info');
 
-        await processAuctions(startsIso, endsIso, minimumBid, bidIncrement);
+        if (minimumBids.length < totalEntities) {
+            addLog(`Note: Only ${minimumBids.length} bid(s) provided. Last "${minimumBids[minimumBids.length-1]}" repeats for remaining entities.`, 'warning');
+        }
+        if (bidIncrements.length < totalEntities) {
+            addLog(`Note: Only ${bidIncrements.length} increment(s) provided. Last "${bidIncrements[bidIncrements.length-1]}" repeats for remaining entities.`, 'warning');
+        }
+
+        await processAuctions(startsIso, endsIso);
     }
 
     function stopProcessing() {
@@ -607,11 +701,17 @@ Example:
     }
 
     // ============ Main loop ============
-    async function processAuctions(startsIso, endsIso, minimumBid, bidIncrement) {
-        // Snapshot inputs so edits during processing don't disturb the loop
+    async function processAuctions(startsIso, endsIso) {
+        // Snapshot all inputs so edits during processing don't disturb the loop
         const entities = [...entityIds];
         const tokens = [...jwtTokens];
+        const bids = [...minimumBids];
+        const increments = [...bidIncrements];
         const total = entities.length;
+
+        // Local per-index getters that use the snapshots
+        const bidAt = i => (i < bids.length ? bids[i] : bids[bids.length - 1]);
+        const incAt = i => (i < increments.length ? increments[i] : increments[increments.length - 1]);
 
         for (let i = currentIndex; i < total && isProcessing; i++) {
             while (isPaused && isProcessing) { await sleep(1000); }
@@ -620,25 +720,33 @@ Example:
             currentIndex = i;
             const entityId = entities[i];
             const jwt = tokens.length === 1 ? tokens[0] : tokens[i];
+            const minBid = bidAt(i);
+            const increment = incAt(i);
 
-            addLog(`Auction ${i + 1}/${total} (entity ${entityId})...`, 'info');
+            addLog(`Auction ${i + 1}/${total} (entity ${entityId}) — bid ${minBid}, inc ${increment}`, 'info');
 
             try {
-                const success = await createAuction(entityId, jwt, startsIso, endsIso, minimumBid, bidIncrement);
+                const success = await createAuction(entityId, jwt, startsIso, endsIso, minBid, increment);
                 if (success) {
                     successfulAuctions++;
-                    addLog(`✓ Entity ${entityId} auction created`, 'success');
+                    addLog(`✓ Entity ${entityId} auction created (bid ${minBid}, inc ${increment})`, 'success');
                 } else {
                     failedAuctions++;
                     addLog(`✗ Entity ${entityId} auction failed`, 'error');
                 }
                 processedEntities++;
-                results.push({ entityId, success, timestamp: new Date().toISOString() });
+                results.push({
+                    entityId, minBid, increment, success,
+                    timestamp: new Date().toISOString()
+                });
             } catch (error) {
                 failedAuctions++;
                 processedEntities++;
                 addLog(`✗ Error for entity ${entityId}: ${error.message}`, 'error');
-                results.push({ entityId, success: false, error: error.message, timestamp: new Date().toISOString() });
+                results.push({
+                    entityId, minBid, increment, success: false,
+                    error: error.message, timestamp: new Date().toISOString()
+                });
             }
 
             $('processedEntities').textContent = processedEntities;
@@ -695,7 +803,7 @@ Example:
             throw new Error(err);
         }
 
-        // Defensive auction-id extraction across common shapes
+        // Defensive auction-id extraction
         const candidates = [
             response,
             response?.data,
@@ -711,14 +819,21 @@ Example:
         }
 
         if (!auctionId) {
-            // No recognizable id, but no explicit failure either
             if (response?.error) throw new Error(response.error);
-            auctionIds.push({ entityId, auctionId: '(unknown)', starts: startsIso, ends: endsIso });
+            auctionIds.push({
+                entityId, auctionId: '(unknown)',
+                minBid: minimumBid, increment: bidIncrement,
+                starts: startsIso, ends: endsIso
+            });
             addLog(`  ├─ Auction created (ID not returned in response)`, 'warning');
             return true;
         }
 
-        auctionIds.push({ entityId, auctionId, starts: startsIso, ends: endsIso });
+        auctionIds.push({
+            entityId, auctionId,
+            minBid: minimumBid, increment: bidIncrement,
+            starts: startsIso, ends: endsIso
+        });
         addLog(`  ├─ Auction ID: ${auctionId}`, 'success');
         return true;
     }
@@ -741,6 +856,8 @@ Example:
         detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">#</th>';
         detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Entity ID</th>';
         detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Auction ID</th>';
+        detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Min Bid</th>';
+        detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Increment</th>';
         detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Starts</th>';
         detailed += '<th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Ends</th>';
         detailed += '</tr></thead><tbody>';
@@ -749,6 +866,8 @@ Example:
                 <td style="padding: 8px;">${idx + 1}</td>
                 <td style="padding: 8px; font-family: monospace;">${item.entityId}</td>
                 <td style="padding: 8px; font-family: monospace; color: #27ae60; font-weight: bold;">${item.auctionId}</td>
+                <td style="padding: 8px; font-family: monospace;">${item.minBid}</td>
+                <td style="padding: 8px; font-family: monospace;">${item.increment}</td>
                 <td style="padding: 8px; font-family: monospace; font-size: 11px;">${item.starts}</td>
                 <td style="padding: 8px; font-family: monospace; font-size: 11px;">${item.ends}</td>
             </tr>`;
@@ -793,13 +912,14 @@ Example:
         text += `Failed: ${failedAuctions}\n`;
         text += `Processed: ${processedEntities}\n`;
         text += `Duration (hours): ${durationHours}\n`;
-        text += `Minimum Bid: ${$('minimumBid').value.trim()}\n`;
-        text += `Bid Increment: ${$('bidIncrement').value.trim()}\n\n`;
+        text += `Bids provided: ${minimumBids.length}\n`;
+        text += `Increments provided: ${bidIncrements.length}\n\n`;
 
         if (auctionIds.length > 0) {
             text += 'Auction IDs:\n------------\n';
             auctionIds.forEach((item, idx) => {
                 text += `${idx + 1}. Entity: ${item.entityId} → Auction ID: ${item.auctionId}\n`;
+                text += `   Min Bid: ${item.minBid}  ·  Increment: ${item.increment}\n`;
                 text += `   Starts: ${item.starts}\n`;
                 text += `   Ends:   ${item.ends}\n`;
             });
@@ -809,6 +929,7 @@ Example:
         text += 'Detailed Results:\n-----------------\n';
         results.forEach((r, idx) => {
             text += `${idx + 1}. Entity ID: ${r.entityId}\n`;
+            text += `   Min Bid: ${r.minBid}  ·  Increment: ${r.increment}\n`;
             text += `   Status: ${r.success ? 'SUCCESS' : 'FAILED'}\n`;
             if (r.success) {
                 const a = auctionIds.find(x => x.entityId === r.entityId);
