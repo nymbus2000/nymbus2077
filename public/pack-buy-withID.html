@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pack Buy - Multi-Account</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        h1, h2, h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+            font-family: monospace;
+            resize: vertical;
+        }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .inline-inputs {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .inline-inputs .input-group {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button.secondary {
+            background-color: #2196F3;
+        }
+        
+        button.secondary:hover {
+            background-color: #0b7dda;
+        }
+        
+        button.warning {
+            background-color: #ff9800;
+        }
+        
+        button.warning:hover {
+            background-color: #e68a00;
+        }
+        
+        button.danger {
+            background-color: #f44336;
+        }
+        
+        button.danger:hover {
+            background-color: #da190b;
+        }
+        
+        .button-group {
+            margin: 20px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .progress-container {
+            margin: 15px 0;
+            width: 100%;
+            background-color: #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 20px;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .stats-summary {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        
+        .stats-summary .stat-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .stats-summary .stat-box .number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stats-summary .stat-box .label {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        
+        .stats-summary .stat-box.failed {
+            border-left-color: #e74c3c;
+        }
+        
+        .stats-summary .stat-box.pending {
+            border-left-color: #f39c12;
+        }
+        
+        .log-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .log-entry {
+            padding: 3px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .log-success {
+            color: #27ae60;
+        }
+        
+        .log-error {
+            color: #e74c3c;
+        }
+        
+        .log-info {
+            color: #3498db;
+        }
+        
+        .log-warning {
+            color: #f39c12;
+        }
+        
+        .notification {
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .notification-success {
+            background-color: #d5f4e6;
+            color: #27ae60;
+            border: 1px solid #a3e4c3;
+        }
+        
+        .notification-error {
+            background-color: #fadbd8;
+            color: #e74c3c;
+            border: 1px solid #f5b7b1;
+        }
+        
+        .notification-info {
+            background-color: #d6eaf8;
+            color: #2980b9;
+            border: 1px solid #aed6f1;
+        }
+        
+        .results-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .result-item {
+            padding: 8px 12px;
+            margin: 4px 0;
+            background-color: #f9f9f9;
+            border-left: 3px solid #4CAF50;
+            font-family: monospace;
+            font-size: 12px;
+            border-radius: 3px;
+        }
+        
+        .result-item.error {
+            border-left-color: #e74c3c;
+            background-color: #fdf2f2;
+        }
+        
+        .result-item .pack-id {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .result-item .jwt-label {
+            color: #7f8c8d;
+            font-size: 11px;
+        }
+        
+        .result-item .batch-label {
+            color: #8e44ad;
+            font-size: 11px;
+        }
+        
+        .small-note {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
+        .config-info {
+            background-color: #e8f4fd;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            text-align: center;
+            color: #2980b9;
+        }
+        
+        .pack-template-id-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .pack-template-id-input input {
+            flex: 1;
+        }
+        
+        .pack-template-id-input span {
+            font-weight: bold;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation will be injected here by nav-loader.js -->
+
+    <div class="container">
+        <h1>Pack Buy</h1>
+        <p>Buys packs using a specified number of packs per JWT, split into batches of max 30.</p>
+
+        
+        <!-- JWT Input -->
+        <div class="input-group">
+            <label for="jwtInput">JWT Tokens (one per line):</label>
+            <textarea id="jwtInput" rows="6" placeholder="Paste your JWT tokens here, one per line"></textarea>
+            <div class="small-note">Each JWT will be processed sequentially. The same number of packs will be bought for each JWT.</div>
+        </div>
+        
+        <!-- Configuration -->
+        <div class="inline-inputs">
+            <div class="input-group">
+                <label for="packsPerJwtInput">Number of Packs per JWT</label>
+                <input type="number" id="packsPerJwtInput" min="1" value="30" />
+                <div class="small-note">How many packs to buy for each JWT</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="batchDelayInput">Delay Between Batches (ms)</label>
+                <input type="number" id="batchDelayInput" min="100" value="7000" />
+                <div class="small-note">Delay between buy batches (e.g., 30+30+30+10)</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="jwtDelayInput">Delay Between JWT Sessions (s)</label>
+                <input type="number" id="jwtDelayInput" min="1" value="5" />
+                <div class="small-note">Delay between processing different JWTs</div>
+            </div>
+        </div>
+        
+        <!-- Pack Template ID -->
+        <div class="input-group">
+            <label for="packTemplateIdInput">Pack Template ID:</label>
+            <div class="pack-template-id-input">
+                <input type="number" id="packTemplateIdInput" value="14323" />
+                
+            </div>
+            <div class="small-note">The pack template ID to purchase</div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="button-group">
+            <button id="startBtn" class="warning">Start Buying Packs</button>
+            <button id="stopBtn" class="danger" style="display: none;">Stop</button>
+            <button id="clearBtn" class="secondary">Clear Results</button>
+        </div>
+        
+        <!-- Progress -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <!-- Notification -->
+        <div id="notification" class="notification"></div>
+        
+        <!-- Stats Summary -->
+        <div id="statsSummary" class="stats-summary" style="display: none;">
+            <div class="stat-box">
+                <div class="number" id="totalUsers">0</div>
+                <div class="label">JWTs</div>
+            </div>
+            <div class="stat-box">
+                <div class="number" id="totalPacksRequested">0</div>
+                <div class="label">Packs Requested</div>
+            </div>
+            <div class="stat-box">
+                <div class="number" id="totalPacksBought">0</div>
+                <div class="label">Packs Bought</div>
+            </div>
+            <div class="stat-box failed">
+                <div class="number" id="failedBatches">0</div>
+                <div class="label">Failed Batches</div>
+            </div>
+            <div class="stat-box pending">
+                <div class="number" id="pendingUsers">0</div>
+                <div class="label">Pending JWTs</div>
+            </div>
+        </div>
+        
+        <!-- Results -->
+        <div id="resultsContainer" style="display: none;">
+            <h2>Buy Results</h2>
+            <div class="results-container" id="resultsBody"></div>
+        </div>
+        
+        <!-- Log -->
+        <div class="log-container" id="logContainer">
+            <div class="log-entry log-info">Ready. Enter JWT tokens and click "Start Buying Packs".</div>
+        </div>
+    </div>
+
+    <script src="/nav-loader.js"></script>
+    <script>
+        // Configuration
+        const MAX_BATCH_SIZE = 30;
+        const PACK_TEMPLATE_ID = 14323; // Default
+        
+        // State
+        let isRunning = false;
+        let stopRequested = false;
+        let totalPacksRequested = 0;
+        let totalPacksBought = 0;
+        let failedBatches = 0;
+        let processedUsers = 0;
+        let userResults = [];
+        
+        // DOM Elements
+        const jwtInput = document.getElementById('jwtInput');
+        const packsPerJwtInput = document.getElementById('packsPerJwtInput');
+        const batchDelayInput = document.getElementById('batchDelayInput');
+        const jwtDelayInput = document.getElementById('jwtDelayInput');
+        const packTemplateIdInput = document.getElementById('packTemplateIdInput');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const notification = document.getElementById('notification');
+        const resultsBody = document.getElementById('resultsBody');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const logContainer = document.getElementById('logContainer');
+        const statsSummary = document.getElementById('statsSummary');
+        const totalUsers = document.getElementById('totalUsers');
+        const totalPacksRequestedEl = document.getElementById('totalPacksRequested');
+        const totalPacksBoughtEl = document.getElementById('totalPacksBought');
+        const failedBatchesEl = document.getElementById('failedBatches');
+        const pendingUsers = document.getElementById('pendingUsers');
+        
+        // Helper function to send requests through proxy
+        async function sendProxyRequest(endpoint, method = 'GET', headers = {}, data = null) {
+            try {
+                const response = await fetch('/proxy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        endpoint: endpoint,
+                        method: method,
+                        headers: headers,
+                        data: data,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('Proxy request failed:', error);
+                throw error;
+            }
+        }
+        
+        // Buy packs
+        async function buyPacks(authToken, packTemplateId, amount) {
+            const headers = {
+                'Content-Type': 'application/json',
+                'x-user-jwt': authToken
+            };
+            
+            const endpoint = '/packs/buy';
+            const data = {
+                packTemplateId: packTemplateId,
+                amount: amount
+            };
+            
+            try {
+                const response = await sendProxyRequest(endpoint, 'POST', headers, data);
+                
+                // Check for success wrapper
+                let packs = response;
+                if (response && response.success === true && Array.isArray(response.data)) {
+                    packs = response.data;
+                } else if (response && response.success === true && response.data && response.data.data && Array.isArray(response.data.data)) {
+                    packs = response.data.data;
+                } else if (!Array.isArray(response)) {
+                    if (response && typeof response === 'object') {
+                        if (Array.isArray(response.data)) {
+                            packs = response.data;
+                        } else if (response.data && Array.isArray(response.data.packs)) {
+                            packs = response.data.packs;
+                        } else if (response.packs && Array.isArray(response.packs)) {
+                            packs = response.packs;
+                        } else {
+                            throw new Error('Invalid response from buy endpoint - no array found');
+                        }
+                    } else {
+                        throw new Error('Invalid response from buy endpoint');
+                    }
+                }
+                
+                if (!Array.isArray(packs)) {
+                    throw new Error('Response is not an array');
+                }
+                
+                // Extract pack IDs from the response
+                const packIds = packs.map(item => item.id);
+                return packIds;
+            } catch (error) {
+                console.error('Error buying packs:', error);
+                throw error;
+            }
+        }
+        
+        // Add log entry
+        function addLog(message, type = 'info') {
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'info') {
+            notification.textContent = message;
+            notification.className = `notification notification-${type}`;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Update progress
+        function updateProgress() {
+            const total = totalPacksRequested || 1;
+            const percent = Math.min((totalPacksBought / total) * 100, 100);
+            progressBar.style.width = `${percent}%`;
+        }
+        
+        // Update stats
+        function updateStats() {
+            const totalUsersVal = userResults.length;
+            const pending = totalUsersVal - processedUsers;
+            
+            totalUsers.textContent = totalUsersVal;
+            totalPacksRequestedEl.textContent = totalPacksRequested;
+            totalPacksBoughtEl.textContent = totalPacksBought;
+            failedBatchesEl.textContent = failedBatches;
+            pendingUsers.textContent = pending > 0 ? pending : 0;
+            
+            if (totalUsersVal > 0 || totalPacksRequested > 0) {
+                statsSummary.style.display = 'flex';
+            } else {
+                statsSummary.style.display = 'none';
+            }
+        }
+        
+        // Add result to display
+        function addResult(userIndex, batchNum, totalBatches, requested, bought, success, error) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result-item${success ? '' : ' error'}`;
+            
+            let html = `<span class="jwt-label">[JWT ${userIndex + 1}]</span> `;
+            html += `<span class="batch-label">[Batch ${batchNum}/${totalBatches}]</span> `;
+            
+            if (success) {
+                html += `✅ Bought ${bought}/${requested} packs`;
+            } else {
+                html += `❌ Failed to buy ${requested} packs: ${error || 'Unknown error'}`;
+            }
+            
+            resultDiv.innerHTML = html;
+            resultsBody.appendChild(resultDiv);
+            resultsBody.scrollTop = resultsBody.scrollHeight;
+        }
+        
+        // Sleep helper
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // Process a single user
+        async function processUser(jwt, userIndex, config) {
+            const { packsPerJwt, batchDelay, packTemplateId } = config;
+            
+            addLog(`[JWT ${userIndex + 1}] Starting processing...`, 'info');
+            
+            try {
+                // Calculate batches (max 30 per batch)
+                const batches = [];
+                let remaining = packsPerJwt;
+                while (remaining > 0) {
+                    const batchSize = Math.min(remaining, MAX_BATCH_SIZE);
+                    batches.push(batchSize);
+                    remaining -= batchSize;
+                }
+                
+                addLog(`[JWT ${userIndex + 1}] Requested ${packsPerJwt} packs in ${batches.length} batch(es): ${batches.join(' + ')}`, 'info');
+                
+                let userBought = 0;
+                let userFailedBatches = 0;
+                
+                for (let batchNum = 0; batchNum < batches.length; batchNum++) {
+                    if (stopRequested) break;
+                    
+                    const batchSize = batches[batchNum];
+                    const batchLabel = `Batch ${batchNum + 1}/${batches.length}`;
+                    
+                    addLog(`[JWT ${userIndex + 1}] Buying ${batchLabel} (${batchSize} packs)...`, 'info');
+                    
+                    try {
+                        const packIds = await buyPacks(jwt, packTemplateId, batchSize);
+                        totalPacksBought += packIds.length;
+                        userBought += packIds.length;
+                        addLog(`[JWT ${userIndex + 1}] ✅ ${batchLabel}: bought ${packIds.length} packs`, 'success');
+                        addResult(userIndex, batchNum + 1, batches.length, batchSize, packIds.length, true, null);
+                    } catch (error) {
+                        failedBatches++;
+                        userFailedBatches++;
+                        addLog(`[JWT ${userIndex + 1}] ❌ ${batchLabel} failed: ${error.message}`, 'error');
+                        addResult(userIndex, batchNum + 1, batches.length, batchSize, 0, false, error.message);
+                    }
+                    
+                    updateProgress();
+                    updateStats();
+                    
+                    // Delay between batches (unless it's the last one or we're stopping)
+                    if (batchNum < batches.length - 1 && !stopRequested) {
+                        addLog(`[JWT ${userIndex + 1}] ⏳ Waiting ${batchDelay / 1000}s before next batch...`, 'info');
+                        await sleep(batchDelay);
+                    }
+                }
+                
+                // User completed
+                userResults.push({
+                    userIndex: userIndex,
+                    packsRequested: packsPerJwt,
+                    packsBought: userBought,
+                    failedBatches: userFailedBatches,
+                    success: userFailedBatches === 0
+                });
+                processedUsers++;
+                updateStats();
+                
+                addLog(`[JWT ${userIndex + 1}] ✅ Processing complete! Bought ${userBought}/${packsPerJwt} packs.`, 'success');
+                
+            } catch (error) {
+                addLog(`[JWT ${userIndex + 1}] ❌ Error: ${error.message}`, 'error');
+                userResults.push({
+                    userIndex: userIndex,
+                    packsRequested: packsPerJwt,
+                    packsBought: 0,
+                    failedBatches: 1,
+                    success: false,
+                    error: error.message
+                });
+                processedUsers++;
+                updateStats();
+            }
+        }
+        
+        // Main function
+        async function startBuying() {
+            if (isRunning) {
+                stopRequested = true;
+                startBtn.textContent = 'Stopping...';
+                startBtn.disabled = true;
+                return;
+            }
+            
+            // Get inputs
+            const jwtText = jwtInput.value.trim();
+            if (!jwtText) {
+                showNotification('Please enter at least one JWT token', 'error');
+                return;
+            }
+            
+            const jwtList = jwtText.split('\n').filter(line => line.trim() !== '');
+            if (jwtList.length === 0) {
+                showNotification('Please enter at least one JWT token', 'error');
+                return;
+            }
+            
+            // Get config
+            const packsPerJwt = parseInt(packsPerJwtInput.value) || 30;
+            if (packsPerJwt < 1) {
+                showNotification('Number of packs must be at least 1', 'error');
+                return;
+            }
+            
+            const batchDelay = parseInt(batchDelayInput.value) || 7000;
+            if (batchDelay < 100) {
+                showNotification('Batch delay must be at least 100ms', 'error');
+                return;
+            }
+            
+            const jwtDelay = parseInt(jwtDelayInput.value) || 5;
+            if (jwtDelay < 1) {
+                showNotification('JWT delay must be at least 1 second', 'error');
+                return;
+            }
+            
+            const packTemplateId = parseInt(packTemplateIdInput.value) || PACK_TEMPLATE_ID;
+            
+            // Reset state
+            isRunning = true;
+            stopRequested = false;
+            totalPacksRequested = packsPerJwt * jwtList.length;
+            totalPacksBought = 0;
+            failedBatches = 0;
+            processedUsers = 0;
+            userResults = [];
+            
+            // Update UI
+            startBtn.textContent = 'Stop';
+            startBtn.classList.remove('warning');
+            startBtn.classList.add('danger');
+            stopBtn.style.display = 'inline-block';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            resultsBody.innerHTML = '';
+            resultsContainer.style.display = 'block';
+            statsSummary.style.display = 'flex';
+            
+            // Initialize stats
+            totalUsers.textContent = jwtList.length;
+            totalPacksRequestedEl.textContent = totalPacksRequested;
+            totalPacksBoughtEl.textContent = '0';
+            failedBatchesEl.textContent = '0';
+            pendingUsers.textContent = jwtList.length;
+            
+            addLog(`🚀 Starting pack buy for ${jwtList.length} JWT(s)`, 'info');
+            addLog(`📦 ${packsPerJwt} packs per JWT (max ${MAX_BATCH_SIZE} per batch)`, 'info');
+            addLog(`⏱️ Batch delay: ${batchDelay}ms, JWT delay: ${jwtDelay}s`, 'info');
+            addLog(`🎯 Pack template ID: ${packTemplateId}`, 'info');
+            
+            const config = {
+                packsPerJwt: packsPerJwt,
+                batchDelay: batchDelay,
+                jwtDelay: jwtDelay * 1000,
+                packTemplateId: packTemplateId
+            };
+            
+            // Process each user
+            for (let i = 0; i < jwtList.length && !stopRequested; i++) {
+                const jwt = jwtList[i].trim();
+                if (!jwt) continue;
+                
+                await processUser(jwt, i, config);
+                
+                // Delay between users (unless it's the last one or we're stopping)
+                if (i < jwtList.length - 1 && !stopRequested) {
+                    addLog(`⏳ Waiting ${config.jwtDelay / 1000}s before next JWT...`, 'info');
+                    await sleep(config.jwtDelay);
+                }
+            }
+            
+            // Complete
+            isRunning = false;
+            startBtn.textContent = 'Start Buying Packs';
+            startBtn.classList.remove('danger');
+            startBtn.classList.add('warning');
+            startBtn.disabled = false;
+            stopBtn.style.display = 'none';
+            
+            if (stopRequested) {
+                addLog(`⏹️ Stopped by user. Bought ${totalPacksBought}/${totalPacksRequested} packs.`, 'warning');
+                showNotification(`Stopped. ${totalPacksBought} packs bought, ${failedBatches} failed batches.`, 'info');
+            } else {
+                addLog(`✅ Complete! Bought ${totalPacksBought}/${totalPacksRequested} packs, ${failedBatches} failed batches.`, 'success');
+                showNotification(`Complete! ${totalPacksBought} packs bought, ${failedBatches} failed batches.`, 'success');
+            }
+            
+            progressContainer.style.display = 'none';
+            updateStats();
+        }
+        
+        // Clear results
+        function clearResults() {
+            if (isRunning) {
+                showNotification('Cannot clear while processing', 'error');
+                return;
+            }
+            
+            resultsBody.innerHTML = '';
+            resultsContainer.style.display = 'none';
+            statsSummary.style.display = 'none';
+            totalPacksRequested = 0;
+            totalPacksBought = 0;
+            failedBatches = 0;
+            processedUsers = 0;
+            userResults = [];
+            logContainer.innerHTML = '';
+            addLog('🧹 Results cleared', 'info');
+            showNotification('Results cleared', 'info');
+        }
+        
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            startBtn.addEventListener('click', startBuying);
+            stopBtn.addEventListener('click', function() {
+                if (isRunning) {
+                    stopRequested = true;
+                    stopBtn.textContent = 'Stopping...';
+                    stopBtn.disabled = true;
+                }
+            });
+            clearBtn.addEventListener('click', clearResults);
+        });
+    </script>
+</body>
+</html>
